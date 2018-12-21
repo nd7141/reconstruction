@@ -440,7 +440,7 @@ class AnonymousWalks(object):
                     walks[w_cropped] += amount
         return walks
 
-    def get_dl(self, source, steps, labels=None, prop=True, verbose=True):
+    def get_dl(self, source, steps, labels=None, prop=True, verbose=True, keep_last=True):
         '''Find anonymous walk distribution exactly.
         Calculates probabilities from each node to all other nodes within n steps.
         Running time is the O(# number of random walks) <= O(n*d_max^steps).
@@ -475,6 +475,10 @@ class AnonymousWalks(object):
                     patterns(RW, v, steps - 1, walks, current_walk + [v], current_dist * RW[node][v]['weight'])
 
         patterns(self.rw_graph, source, steps, walks)
+        if keep_last == True:
+            walks = list(filter(lambda w: len(w) == steps + 1, walks))
+        else:
+            walks = list(walks.keys())
         if verbose:
             print('Total walks of size {} in a graph:'.format(steps), len(all_walks))
         return walks
