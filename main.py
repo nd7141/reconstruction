@@ -1,3 +1,5 @@
+import time
+
 import networkx as nx
 # import matplotlib.pyplot as plt
 import numpy as np
@@ -116,6 +118,54 @@ def number_of_aw_in_path(n, source, steps):
     c = Counter(list(map(len, walks)))
     return list(map(lambda v: v[1], sorted(c.items())))
 
+def check_aw_in_graph(G, source, aw, curr_walks = None, verbose=True):
+    '''
+    Returns random walks that correspond to anonymous walk.
+    :param G: graph
+    :param source: starting vertex
+    :param aw: anonymous walk to check
+    :return: random walks and their mapping to anonymous walk.
+    '''
+
+    curr_walks = [([source], {source: 0})] # list of tuples: rw, {node->anon}
+    for ix in range(1, len(aw)):
+        new_walks = []
+        target_anonymized = aw[ix]
+        for walk, mapping in curr_walks:
+            new_idx = max(mapping.values()) + 1
+            for neighbor in G[walk[-1]]:
+                if neighbor in mapping:
+                    if mapping[neighbor] == target_anonymized:
+                        new_walks.append((walk + [neighbor], mapping))
+                else:
+                    if new_idx == target_anonymized:
+                        new_walks.append((walk + [neighbor], dict(mapping, **{neighbor: new_idx})))
+        curr_walks = new_walks.copy()
+        if verbose:
+            print('Iteration {}. Found {} random walks that correspond to {}'.format(ix,
+                                                                                    len(curr_walks),
+                                                                                    list(map(str, aw[:ix+1]))))
+    return curr_walks
+
+def check_corpus_of_aw(graph, source, aws):
+    ''' Check every aw in graph.
+
+    :param graph: graph
+    :param source: starting vertex
+    :param aws: list of aw
+    :return:
+    '''
+    start = time.time()
+    d = dict()
+    for ix, aw in enumerate(aws):
+        walks = check_aw_in_graph(graph, source, aw, verbose=False)
+        d[tuple(aw)] = int(len(walks) > 0)
+        print(ix)
+    print('Time: {:.2f}'.format(time.time() - start))
+    return d
+
+
+
 if __name__ == '__main__':
     G1 = nx.Graph()
     # G1.add_edges_from([(0,1), (0,2), (1,2), (1,3), (2,4), (3,5), (4,5), (4,6), (4,7), (5,6), (5,7), (6,7)])
@@ -147,14 +197,12 @@ if __name__ == '__main__':
     aw.create_random_walk_graph()
     Dl = aw.get_dl(0, 10)
 
-    # balls, supports = reconstruct(Dl, 3)
-    balls = reconstruct_dfs(Dl)
-    # print(supports)
+    G = nx.read_edgelist('er_graphs/0.edgelist')
+    with open('aw/aw20.txt') as f:
+        aws = list(map(lambda line: list(map(int, line.strip().split(','))), f.readlines()))
 
-    paths10 = all_aw(10)
-    # cardinalities = number_of_aw_restricted(10)
-
-    # number of anonymous walks in a path
-    print(number_of_aw_in_path(10, 0, 15))
+    # curr_walks = check_aw_in_graph(G, '0', aws[38])
+    aws_in_graph = check_corpus_of_aw(G, '0', aws)
+    print(Counter(aws_in_graph.values()))
 
     console = []

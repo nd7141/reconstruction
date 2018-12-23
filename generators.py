@@ -101,20 +101,26 @@ def generate_anonymous_walks(n_vertices, save_to_file=None, path=None):
 
 if __name__ == '__main__':
 
-    NG = 100 # number of graphs
-    NV = 6 # number of vertices
+    NG = 1000 # number of graphs
+    NV = 20 # number of vertices
 
 
-    graphs = generate_ER_graphs(NG, NV, prob=0.2, save_to_files=True, graph_dir='er_graphs')
-    print('Statistics on generated graphs')
-    print('Nodes histogram:', Counter([_.order() for _ in graphs]))
-    print('Nodes mean:', np.mean([_.order() for _ in graphs]))
-    print('Edges histogram:', Counter([_.size() for _ in graphs]))
-    print('Edges mean:', np.mean([_.size() for _ in graphs]))
+    # graphs = generate_ER_graphs(NG, NV, prob=0.2, save_to_files=True, graph_dir='er_graphs')
+    # print('Statistics on generated graphs')
+    # print('Nodes histogram:', Counter([_.order() for _ in graphs]))
+    # print('Nodes mean:', np.mean([_.order() for _ in graphs]))
+    # print('Edges histogram:', Counter([_.size() for _ in graphs]))
+    # print('Edges mean:', np.mean([_.size() for _ in graphs]))
 
     if not os.path.exists('aw/'):
         os.mkdir('aw/')
-    aw = generate_anonymous_walks(NV, save_to_file=True, path='aw/aw{}.txt'.format(NV))
+    # aw = generate_anonymous_walks(NV, save_to_file=True, path='aw/aw{}.txt'.format(NV))
+
+    with open('aw/aw20.txt') as f:
+        ls= [len(line.strip().split(',')) for line in f]
+    print(Counter(ls))
+
+
 
 
     console = []
