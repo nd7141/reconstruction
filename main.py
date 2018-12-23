@@ -1,5 +1,5 @@
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 from AnonymousWalkKernel import AnonymousWalks as AW
 from collections import defaultdict as ddict, Counter
