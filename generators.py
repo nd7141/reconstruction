@@ -101,16 +101,16 @@ def generate_anonymous_walks(n_vertices, save_to_file=None, path=None):
 
 if __name__ == '__main__':
 
-    NG = 1000 # number of graphs
-    NV = 20 # number of vertices
+    NG = 1 # number of graphs
+    NV = 10 # number of vertices
 
 
-    # graphs = generate_ER_graphs(NG, NV, prob=0.2, save_to_files=True, graph_dir='er_graphs')
-    # print('Statistics on generated graphs')
-    # print('Nodes histogram:', Counter([_.order() for _ in graphs]))
-    # print('Nodes mean:', np.mean([_.order() for _ in graphs]))
-    # print('Edges histogram:', Counter([_.size() for _ in graphs]))
-    # print('Edges mean:', np.mean([_.size() for _ in graphs]))
+    graphs = generate_ER_graphs(NG, NV, prob=0.2, save_to_files=True, graph_dir='er_graphs_n10')
+    print('Statistics on generated graphs')
+    print('Nodes histogram:', Counter([_.order() for _ in graphs]))
+    print('Nodes mean:', np.mean([_.order() for _ in graphs]))
+    print('Edges histogram:', Counter([_.size() for _ in graphs]))
+    print('Edges mean:', np.mean([_.size() for _ in graphs]))
 
     if not os.path.exists('aw/'):
         os.mkdir('aw/')

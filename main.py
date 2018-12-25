@@ -78,6 +78,32 @@ def reconstruct_dfs(Dl):
             S.pop()
     return P
 
+def reconstruct_dfs2(graph, source):
+    P = [0] # supporting walk
+    S = [0] # stack of nodes to check
+    checked = dict() # nodes that has been checked for edge
+    while len(S) > 0: # grow supporting walk in DFS manner
+        curr = S[-1]
+        x = max(P) + 1 # next node to check
+        for u in range(curr+1, x): # u is already in the supporting walk
+            # check if there is connection to already discovered nodes
+            if u not in checked[curr]: # see if we already checked this edge
+                rpl = replace(P, curr, u)
+                if check_aw_in_graph(graph, source, rpl):
+                    P = rpl # add additional edge to the support walk
+                checked.setdefault(curr, set()).add(u)
+
+        # check if the current node is connected to a not-yet-discovered node
+        rpl = replace(P, curr, x)
+        if check_aw_in_graph(graph, source, rpl): # move one level up in the walk
+            checked.setdefault(curr, set()).add(x)
+            S.append(x)
+            P = rpl
+        else: # move one level down in the walk
+            S.pop()
+        print('Current support:', P)
+    return P
+
 def all_aw(steps, keep_last = False):
     '''Get all possible anonymous walks of length up to steps.'''
     paths = []
@@ -118,7 +144,7 @@ def number_of_aw_in_path(n, source, steps):
     c = Counter(list(map(len, walks)))
     return list(map(lambda v: v[1], sorted(c.items())))
 
-def check_aw_in_graph(G, source, aw, curr_walks = None, verbose=True):
+def check_aw_in_graph(graph, source, aw, verbose=False):
     '''
     Returns random walks that correspond to anonymous walk.
     :param G: graph
@@ -130,16 +156,28 @@ def check_aw_in_graph(G, source, aw, curr_walks = None, verbose=True):
     curr_walks = [([source], {source: 0})] # list of tuples: rw, {node->anon}
     for ix in range(1, len(aw)):
         new_walks = []
-        target_anonymized = aw[ix]
+        prev_target_anonymized = aw[ix - 1] # previous element of aw to check
+        target_anonymized = aw[ix] # current element of aw to check
         for walk, mapping in curr_walks:
-            new_idx = max(mapping.values()) + 1
-            for neighbor in G[walk[-1]]:
-                if neighbor in mapping:
-                    if mapping[neighbor] == target_anonymized:
-                        new_walks.append((walk + [neighbor], mapping))
-                else:
-                    if new_idx == target_anonymized:
-                        new_walks.append((walk + [neighbor], dict(mapping, **{neighbor: new_idx})))
+            if target_anonymized in mapping.values(): # we already have this index in the mapping
+                # check if we already traversed this edge
+                nodes = list(map(lambda node: mapping[node], walk)) # anon nodes
+                pairs = list(zip(nodes, nodes[1:])) # edge pairs
+                sorted_pairs = list(map(lambda p: sorted(p), pairs)) # all anon pairs
+                if sorted([prev_target_anonymized, target_anonymized]) in sorted_pairs: # presence of this edge
+                    reverse_mapping = {v: k for k, v in mapping.items()}
+                    new_walks.append((walk + [reverse_mapping[target_anonymized]], mapping)) # add the node to the walk
+            else:
+                new_idx = max(mapping.values()) + 1 # anonymous index for new neighbor
+                for neighbor in graph[walk[-1]]: # check each neighbor
+                    if neighbor in mapping: # already encountered this node
+                        if mapping[neighbor] == target_anonymized: # equals to what we seek
+                            new_walks.append((walk + [neighbor], mapping))
+                    else: # new neighbor
+                        if new_idx == target_anonymized: # new value
+                            new_mapping = mapping.copy() # update mapping
+                            new_mapping[neighbor] = new_idx
+                            new_walks.append((walk + [neighbor], new_mapping))
         curr_walks = new_walks.copy()
         if verbose:
             print('Iteration {}. Found {} random walks that correspond to {}'.format(ix,
@@ -163,8 +201,6 @@ def check_corpus_of_aw(graph, source, aws):
         print(ix)
     print('Time: {:.2f}'.format(time.time() - start))
     return d
-
-
 
 if __name__ == '__main__':
     G1 = nx.Graph()
@@ -197,12 +233,14 @@ if __name__ == '__main__':
     aw.create_random_walk_graph()
     Dl = aw.get_dl(0, 10)
 
-    G = nx.read_edgelist('er_graphs/0.edgelist')
-    with open('aw/aw20.txt') as f:
-        aws = list(map(lambda line: list(map(int, line.strip().split(','))), f.readlines()))
+    # G = nx.read_edgelist('er_graphs_n10/0.edgelist')
+    # print('G:', G.edges())
+    # print(reconstruct_dfs2(G, '0'))
+    # with open('aw/aw6.txt') as f:
+    #     aws = list(map(lambda line: list(map(int, line.strip().split(','))), f.readlines()))
 
-    # curr_walks = check_aw_in_graph(G, '0', aws[38])
-    aws_in_graph = check_corpus_of_aw(G, '0', aws)
-    print(Counter(aws_in_graph.values()))
+    curr_walks = check_aw_in_graph(G2, 0, [0,1,2,1,0], verbose=True)
+    # aws_in_graph = check_corpus_of_aw(G, '0', aws)
+    # print(Counter(aws_in_graph.values()))
 
     console = []
