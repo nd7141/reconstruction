@@ -100,6 +100,17 @@ def generate_anonymous_walks(n_vertices, save_to_file=None, path=None):
     return walks + branched_walks
 
 def generate_regular_graphs(n_graphs, n_vertices, degree, save_to_files=None, graph_dir=None):
+    '''
+    Generates random graphs with same degree.
+    See here for the number of distinct graphs for n and d.
+    For example for n = 8 and d = 3, there are 5 graphs.
+    :param n_graphs: number of graphs to generate
+    :param n_vertices: number of vertices in each graphs
+    :param degree: degree of each vertex
+    :param save_to_files: where to save files
+    :param graph_dir: graph directory
+    :return:
+    '''
     graphs = [nx.random_regular_graph(degree, n_vertices)
               for _ in range(n_graphs)]
     if save_to_files:
