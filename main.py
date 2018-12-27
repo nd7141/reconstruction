@@ -205,6 +205,52 @@ def check_corpus_of_aw(graph, source, aws):
     print('Time: {:.2f}'.format(time.time() - start))
     return d
 
+def graph_canonical_labeling(graph, degrees = None):
+    '''
+    Return the minimal frequency degree canonical labeling of a graph.
+    It will select the degree that is the least frequent
+    (and if tied the least by value among ties).
+
+    :param graph: graph to compute canonical labeling
+    :param degrees: if given use precomputed degrees instead
+    :return:
+    '''
+
+    if degrees is None:
+        degrees = graph.degree()
+
+    degree_x_freq = sorted(Counter(degrees.values()).items(), key=lambda v: (v[1], v[0]))
+    target_degree, _ = degree_x_freq[0]
+
+    canonical_nodes = filter(lambda v: v[1] == target_degree, degrees.items())
+
+    alphas = sorted([reconstruct_dfs2(graph, node) for node, _ in canonical_nodes])
+
+    return alphas
+
+def graph_isomorphism_algorithm(G1, G2):
+    '''
+    Tests if two graphs are isomorphic using Anonymous Canonical Labeling.
+    The test uses the least frequent degree canonical labelings.
+    :param G1:
+    :param G2:
+    :return: bool, if two graphs are isomorphic
+    '''
+
+    degrees1 = G1.degree()
+    degrees2 = G2.degree()
+
+    if sorted(degrees1.values()) != sorted(degrees2.values()):
+        print('Stop on sequence degree')
+        return False
+
+    cl1 = graph_canonical_labeling(G1, degrees1)
+    cl2 = graph_canonical_labeling(G2, degrees2)
+
+    return np.all(np.array(cl1) == np.array(cl2))
+
+
+
 if __name__ == '__main__':
     G1 = nx.Graph()
     # G1.add_edges_from([(0,1), (0,2), (1,2), (1,3), (2,4), (3,5), (4,5), (4,6), (4,7), (5,6), (5,7), (6,7)])
@@ -246,17 +292,27 @@ if __name__ == '__main__':
     # aws_in_graph = check_corpus_of_aw(G, '0', aws)
     # print(Counter(aws_in_graph.values()))
 
-    G1 = nx.read_edgelist('test/so_1.txt')
-    G2 = nx.read_edgelist('test/so_2.txt')
+    G1 = nx.read_edgelist('test/regular6_1.txt')
+    G2 = nx.read_edgelist('test/regular6_2.txt')
+    G3 = nx.read_edgelist('test/so_1.txt')
+    G4 = nx.read_edgelist('test/so_2.txt')
 
     G1 = nx.convert_node_labels_to_integers(G1)
     G2 = nx.convert_node_labels_to_integers(G2)
+    G3 = nx.convert_node_labels_to_integers(G3)
+    G4 = nx.convert_node_labels_to_integers(G4)
 
-    p1 = reconstruct_dfs2(G1, 3)
-    p2 = reconstruct_dfs2(G2, 3)
+    alphas1 = graph_canonical_labeling(G1)
+    print(alphas1)
 
-    print(p1)
-    print(p2)
+    alphas2 = graph_canonical_labeling(G2)
+    print(alphas2)
+
+    # p1 = reconstruct_dfs2(G1, 3)
+    # p2 = reconstruct_dfs2(G2, 3)
+
+    # print(p1)
+    # print(p2)
     # alpha = [0, 1, 2, 3, 4, 5, 4, 3, 2, 5, 2, 1, 0]
     # curr_walks = check_aw_in_graph(G1, 0, alpha, verbose=True)
     # print(curr_walks)

@@ -99,26 +99,36 @@ def generate_anonymous_walks(n_vertices, save_to_file=None, path=None):
 
     return walks + branched_walks
 
+def generate_regular_graphs(n_graphs, n_vertices, degree, save_to_files=None, graph_dir=None):
+    graphs = [nx.random_regular_graph(degree, n_vertices)
+              for _ in range(n_graphs)]
+    if save_to_files:
+        if not os.path.exists(graph_dir):
+            os.mkdir(graph_dir)
+        [nx.write_edgelist(G, '{}/{}.edgelist'.format(graph_dir, ix)) for ix, G in enumerate(graphs)]
+    return graphs
+
 if __name__ == '__main__':
 
-    NG = 1 # number of graphs
-    NV = 10 # number of vertices
+    NG = 1000 # number of graphs
+    NV = 8 # number of vertices
+    D = 3 # degree of vertices
 
+    # graphs = generate_ER_graphs(NG, NV, prob=0.2, save_to_files=True, graph_dir='er_graphs_n10')
+    graphs = generate_regular_graphs(NG, NV, D, save_to_files=True, graph_dir='reg_graphs_n8_d3')
+    # print('Statistics on generated graphs')
+    # print('Nodes histogram:', Counter([_.order() for _ in graphs]))
+    # print('Nodes mean:', np.mean([_.order() for _ in graphs]))
+    # print('Edges histogram:', Counter([_.size() for _ in graphs]))
+    # print('Edges mean:', np.mean([_.size() for _ in graphs]))
 
-    graphs = generate_ER_graphs(NG, NV, prob=0.2, save_to_files=True, graph_dir='er_graphs_n10')
-    print('Statistics on generated graphs')
-    print('Nodes histogram:', Counter([_.order() for _ in graphs]))
-    print('Nodes mean:', np.mean([_.order() for _ in graphs]))
-    print('Edges histogram:', Counter([_.size() for _ in graphs]))
-    print('Edges mean:', np.mean([_.size() for _ in graphs]))
-
-    if not os.path.exists('aw/'):
-        os.mkdir('aw/')
+    # if not os.path.exists('aw/'):
+    #     os.mkdir('aw/')
     # aw = generate_anonymous_walks(NV, save_to_file=True, path='aw/aw{}.txt'.format(NV))
 
-    with open('aw/aw20.txt') as f:
-        ls= [len(line.strip().split(',')) for line in f]
-    print(Counter(ls))
+    # with open('aw/aw20.txt') as f:
+    #     ls= [len(line.strip().split(',')) for line in f]
+    # print(Counter(ls))
 
 
 
