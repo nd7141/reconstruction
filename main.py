@@ -78,7 +78,7 @@ def reconstruct_dfs(Dl):
             S.pop()
     return P
 
-def reconstruct_dfs2(graph, source):
+def reconstruct_dfs2(graph, source, verbose=False):
     P = [0] # supporting walk
     S = [0] # stack of nodes to check
     checked = dict() # nodes that has been checked for edge
@@ -101,7 +101,8 @@ def reconstruct_dfs2(graph, source):
             P = rpl
         else: # move one level down in the walk
             S.pop()
-        print('Current support:', P)
+        if verbose:
+            print('Current support:', P)
     return P
 
 def all_aw(steps, keep_last = False):
@@ -159,25 +160,27 @@ def check_aw_in_graph(graph, source, aw, verbose=False):
         prev_target_anonymized = aw[ix - 1] # previous element of aw to check
         target_anonymized = aw[ix] # current element of aw to check
         for walk, mapping in curr_walks:
+
+            # check if we already traversed this edge
             if target_anonymized in mapping.values(): # we already have this index in the mapping
-                # check if we already traversed this edge
                 nodes = list(map(lambda node: mapping[node], walk)) # anon nodes
                 pairs = list(zip(nodes, nodes[1:])) # edge pairs
                 sorted_pairs = list(map(lambda p: sorted(p), pairs)) # all anon pairs
                 if sorted([prev_target_anonymized, target_anonymized]) in sorted_pairs: # presence of this edge
                     reverse_mapping = {v: k for k, v in mapping.items()}
                     new_walks.append((walk + [reverse_mapping[target_anonymized]], mapping)) # add the node to the walk
-            else:
-                new_idx = max(mapping.values()) + 1 # anonymous index for new neighbor
-                for neighbor in graph[walk[-1]]: # check each neighbor
-                    if neighbor in mapping: # already encountered this node
-                        if mapping[neighbor] == target_anonymized: # equals to what we seek
-                            new_walks.append((walk + [neighbor], mapping))
-                    else: # new neighbor
-                        if new_idx == target_anonymized: # new value
-                            new_mapping = mapping.copy() # update mapping
-                            new_mapping[neighbor] = new_idx
-                            new_walks.append((walk + [neighbor], new_mapping))
+                    continue # move on to next walk as no other nodes can continue this walk
+
+            new_idx = max(mapping.values()) + 1 # anonymous index for new neighbor
+            for neighbor in graph[walk[-1]]: # check each neighbor
+                if neighbor in mapping: # already encountered this node
+                    if mapping[neighbor] == target_anonymized: # equals to what we seek
+                        new_walks.append((walk + [neighbor], mapping))
+                else: # new neighbor
+                    if new_idx == target_anonymized: # new value
+                        new_mapping = mapping.copy() # update mapping
+                        new_mapping[neighbor] = new_idx
+                        new_walks.append((walk + [neighbor], new_mapping))
         curr_walks = new_walks.copy()
         if verbose:
             print('Iteration {}. Found {} random walks that correspond to {}'.format(ix,
@@ -231,7 +234,7 @@ if __name__ == '__main__':
 
     aw = AW(G2)
     aw.create_random_walk_graph()
-    Dl = aw.get_dl(0, 10)
+    # Dl = aw.get_dl(0, 10)
 
     # G = nx.read_edgelist('er_graphs_n10/0.edgelist')
     # print('G:', G.edges())
@@ -239,8 +242,24 @@ if __name__ == '__main__':
     # with open('aw/aw6.txt') as f:
     #     aws = list(map(lambda line: list(map(int, line.strip().split(','))), f.readlines()))
 
-    curr_walks = check_aw_in_graph(G2, 0, [0,1,2,1,0], verbose=True)
+    # curr_walks = check_aw_in_graph(G2, 0, [0,1,2,1,0], verbose=True)
     # aws_in_graph = check_corpus_of_aw(G, '0', aws)
     # print(Counter(aws_in_graph.values()))
+
+    G1 = nx.read_edgelist('test/so_1.txt')
+    G2 = nx.read_edgelist('test/so_2.txt')
+
+    G1 = nx.convert_node_labels_to_integers(G1)
+    G2 = nx.convert_node_labels_to_integers(G2)
+
+    p1 = reconstruct_dfs2(G1, 3)
+    p2 = reconstruct_dfs2(G2, 3)
+
+    print(p1)
+    print(p2)
+    # alpha = [0, 1, 2, 3, 4, 5, 4, 3, 2, 5, 2, 1, 0]
+    # curr_walks = check_aw_in_graph(G1, 0, alpha, verbose=True)
+    # print(curr_walks)
+
 
     console = []
