@@ -3,6 +3,8 @@ import os
 from collections import Counter
 import numpy as np
 import random
+import pandas as pd
+
 
 from main import replace
 
@@ -119,6 +121,22 @@ def generate_regular_graphs(n_graphs, n_vertices, degree, save_to_files=None, gr
         [nx.write_edgelist(G, '{}/{}.edgelist'.format(graph_dir, ix)) for ix, G in enumerate(graphs)]
     return graphs
 
+def read_dimacs_graph(filename):
+    G = nx.Graph()
+    with open(filename) as f:
+        for line in f:
+            if line.startswith('p'):
+                continue
+            elif line.startswith('e'):
+                splitted = line.strip().split(' ')
+                G.add_edge(splitted[1], splitted[2])
+            else:
+                print('Found bad line start: ', line)
+                raise Exception
+    return G
+
+
+
 if __name__ == '__main__':
 
     NG = 1000 # number of graphs
@@ -141,7 +159,19 @@ if __name__ == '__main__':
     #     ls= [len(line.strip().split(',')) for line in f]
     # print(Counter(ls))
 
+    data_dir = '../data-reconstruction/cfi-rigid-d3'
+    # G = read_dimacs_graph('data/cfi-rigid-z2/cfi-rigid-z2-0088-01-1')
 
+    if not os.path.exists(data_dir + '-edges/'):
+        os.mkdir(data_dir + '-edges/')
+
+    files = os.listdir(data_dir)
+    for i, fn in enumerate(files):
+        print(i)
+        G = read_dimacs_graph(data_dir + '/' + fn)
+        nx.write_edgelist(G, '{}-edges/{}'.format(data_dir, fn))
+
+    print(G.order(), G.size())
 
 
     console = []
