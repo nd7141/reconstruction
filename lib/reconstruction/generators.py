@@ -6,7 +6,8 @@ import random
 import pandas as pd
 
 
-from main import replace
+from .main import replace
+
 
 def connect_graph(graph):
     '''
@@ -23,6 +24,7 @@ def connect_graph(graph):
         u, v = random.choice(curr), random.choice(foll)
         graph.add_edge(u, v)
     return graph
+
 
 def generate_ER_graphs(n_graphs,
                        n_vertices,
@@ -50,6 +52,7 @@ def generate_ER_graphs(n_graphs,
             os.mkdir(graph_dir)
         [nx.write_edgelist(G, '{}/{}.edgelist'.format(graph_dir, ix)) for ix, G in enumerate(graphs)]
     return graphs
+
 
 def generate_anonymous_walks(n_vertices, save_to_file=None, path=None):
     '''Generates anonymous walks that are tested by the algorithm.
@@ -101,6 +104,7 @@ def generate_anonymous_walks(n_vertices, save_to_file=None, path=None):
 
     return walks + branched_walks
 
+
 def generate_regular_graphs(n_graphs, n_vertices, degree, save_to_files=None, graph_dir=None):
     '''
     Generates random graphs with same degree.
@@ -121,6 +125,7 @@ def generate_regular_graphs(n_graphs, n_vertices, degree, save_to_files=None, gr
         [nx.write_edgelist(G, '{}/{}.edgelist'.format(graph_dir, ix)) for ix, G in enumerate(graphs)]
     return graphs
 
+
 def read_dimacs_graph(filename):
     G = nx.Graph()
     with open(filename) as f:
@@ -134,7 +139,6 @@ def read_dimacs_graph(filename):
                 print('Found bad line start: ', line)
                 raise Exception
     return G
-
 
 
 if __name__ == '__main__':
@@ -172,6 +176,3 @@ if __name__ == '__main__':
         nx.write_edgelist(G, '{}-edges/{}'.format(data_dir, fn))
 
     print(G.order(), G.size())
-
-
-    console = []

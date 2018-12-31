@@ -3,8 +3,9 @@ import time
 import networkx as nx
 # import matplotlib.pyplot as plt
 import numpy as np
-from AnonymousWalkKernel import AnonymousWalks as AW
+from .AnonymousWalkKernel import AnonymousWalks as AW
 from collections import defaultdict as ddict, Counter
+
 
 def support(P):
     '''Reconstruct graph from the walk.'''
@@ -53,6 +54,7 @@ def reconstruct(Dl, radius):
     S.append(P)
     return balls, S
 
+
 def reconstruct_dfs(Dl):
     P = [0] # supporting walk
     S = [0] # stack of nodes to check
@@ -77,6 +79,7 @@ def reconstruct_dfs(Dl):
         else: # move one level down in the walk
             S.pop()
     return P
+
 
 def reconstruct_dfs2(graph, source, verbose=False):
     P = [0] # supporting walk
@@ -105,6 +108,7 @@ def reconstruct_dfs2(graph, source, verbose=False):
             print('Current support:', P)
     return P
 
+
 def all_aw(steps, keep_last = False):
     '''Get all possible anonymous walks of length up to steps.'''
     paths = []
@@ -122,6 +126,7 @@ def all_aw(steps, keep_last = False):
         paths = list(filter(lambda path: len(path) ==  steps + 1, paths))
     return paths
 
+
 # condition j <= i + 1
 def number_of_aw_restricted(length):
     levels = dict()
@@ -136,6 +141,7 @@ def number_of_aw_restricted(length):
         levels[step] = dict(new_level)
     return levels
 
+
 def number_of_aw_in_path(n, source, steps):
     P = nx.path_graph(n)
     aw = AW(P)
@@ -144,6 +150,7 @@ def number_of_aw_in_path(n, source, steps):
     walks = aw.get_dl(source, steps, verbose=False, keep_last=False)
     c = Counter(list(map(len, walks)))
     return list(map(lambda v: v[1], sorted(c.items())))
+
 
 def check_aw_in_graph(graph, source, aw, verbose=False):
     '''
@@ -188,6 +195,7 @@ def check_aw_in_graph(graph, source, aw, verbose=False):
                                                                                     list(map(str, aw[:ix+1]))))
     return curr_walks
 
+
 def check_corpus_of_aw(graph, source, aws):
     ''' Check every aw in graph.
 
@@ -204,6 +212,7 @@ def check_corpus_of_aw(graph, source, aws):
         print(ix)
     print('Time: {:.2f}'.format(time.time() - start))
     return d
+
 
 def graph_canonical_labeling(graph, degrees = None):
     '''
@@ -228,6 +237,7 @@ def graph_canonical_labeling(graph, degrees = None):
 
     return alphas
 
+
 def graph_isomorphism_algorithm(G1, G2):
     '''
     Tests if two graphs are isomorphic using Anonymous Canonical Labeling.
@@ -248,7 +258,6 @@ def graph_isomorphism_algorithm(G1, G2):
     cl2 = graph_canonical_labeling(G2, degrees2)
 
     return np.all(np.array(cl1) == np.array(cl2))
-
 
 
 if __name__ == '__main__':

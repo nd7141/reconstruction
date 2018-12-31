@@ -11,6 +11,7 @@ import re
 from collections import Counter
 import linecache
 
+
 class AnonymousWalks(object):
     '''
     Computes Anonymous Walks of a Graph.
@@ -19,7 +20,8 @@ class AnonymousWalks(object):
     anonymous walks of length l, generate a random batch of anonymous walks for AWE distributed model,
     and other utilities.
     '''
-    def __init__(self, G = None):
+
+    def __init__(self, G=None):
         self._graph = G
         # paths are dictionary between step and all-paths
         self.paths = dict()
@@ -33,7 +35,7 @@ class AnonymousWalks(object):
     def graph(self, G):
         self._graph = G
 
-    def read_graph_from_text(self, filename, header = True, weights = True, sep = ',', directed = False):
+    def read_graph_from_text(self, filename, header=True, weights=True, sep=',', directed=False):
         '''Read from Text Files.'''
         G = nx.Graph()
         if directed:
@@ -75,14 +77,14 @@ class AnonymousWalks(object):
             total = float(sum([edges[v].get(label_name, 1) for v in edges if v != node]))
             for v in edges:
                 if v != node:
-                    RW.add_edge(node, v, weight = edges[v].get(label_name,1) / total)
+                    RW.add_edge(node, v, weight=edges[v].get(label_name, 1) / total)
         self.rw_graph = RW
 
-    def _all_paths(self, steps, keep_last = False):
+    def _all_paths(self, steps, keep_last=False):
         '''Get all possible anonymous walks of length up to steps.'''
         paths = []
         last_step_paths = [[0, 1]]
-        for i in range(2, steps+1):
+        for i in range(2, steps + 1):
             current_step_paths = []
             for j in range(i + 1):
                 for walks in last_step_paths:
@@ -92,10 +94,10 @@ class AnonymousWalks(object):
             last_step_paths = current_step_paths
         # filter only on n-steps walks
         if keep_last:
-            paths = list(filter(lambda path: len(path) ==  steps + 1, paths))
+            paths = list(filter(lambda path: len(path) == steps + 1, paths))
         self.paths[steps] = paths
 
-    def _all_paths_edges(self, steps, keep_last = True):
+    def _all_paths_edges(self, steps, keep_last=True):
         '''Get all possible anonymous walks of length up to steps, using edge labels'''
         paths = []
         last_step_paths = [[]]
@@ -112,11 +114,11 @@ class AnonymousWalks(object):
         self.paths[steps] = paths
         return paths
 
-    def _all_paths_nodes(self, steps, keep_last = True):
+    def _all_paths_nodes(self, steps, keep_last=True):
         '''Get all possible anonymous walks of length up to steps, using node labels'''
         paths = []
         last_step_paths = [[0]]
-        for i in range(1, steps+1):
+        for i in range(1, steps + 1):
             current_step_paths = []
             for j in range(i + 1):
                 for walks in last_step_paths:
@@ -129,7 +131,7 @@ class AnonymousWalks(object):
         self.paths[steps] = paths
         return paths
 
-    def _all_paths_edges_nodes(self, steps, keep_last = True):
+    def _all_paths_edges_nodes(self, steps, keep_last=True):
         '''Get all possible anonymous walks of length up to steps, using edge-node labels'''
         edge_paths = self._all_paths_edges(steps, keep_last=keep_last)
         node_paths = self._all_paths_nodes(steps, keep_last=keep_last)
@@ -140,7 +142,7 @@ class AnonymousWalks(object):
                     current_path = [p2[0]]
                     for ix in range(len(p1)):
                         current_path.append(p1[ix])
-                        current_path.append(p2[ix+1])
+                        current_path.append(p2[ix + 1])
                     paths.append(current_path)
         self.paths[steps] = paths
         return paths
@@ -192,7 +194,7 @@ class AnonymousWalks(object):
         edge_labels = dict()
         for ix, node in enumerate(walk[1:]):
             node_label = self.graph.node[node]['label']
-            edge_label = int(self.graph[walk[ix]][walk[ix+1]]['label'])
+            edge_label = int(self.graph[walk[ix]][walk[ix + 1]]['label'])
             if node_label not in node_labels:
                 node_labels[node_label] = node_idx
                 node_idx += 1
@@ -206,7 +208,7 @@ class AnonymousWalks(object):
     def n_samples(self, steps, delta, eps):
         '''Number of samples with eps and delta concetration inequality.'''
         a = len(list(self.paths[steps]))
-        estimation = 2*(math.log(2)*a + math.log(1./delta))/eps**2
+        estimation = 2 * (math.log(2) * a + math.log(1. / delta)) / eps ** 2
         return int(estimation) + 1
 
     def _random_step_node(self, node):
@@ -291,7 +293,7 @@ class AnonymousWalks(object):
             node = v
         return tuple(pattern)
 
-    def _anonymous_walk(self, node, steps, labels = None):
+    def _anonymous_walk(self, node, steps, labels=None):
         '''Creates anonymous walk for a node.'''
         if labels is None:
             return self._random_walk_node(node, steps)
@@ -302,7 +304,7 @@ class AnonymousWalks(object):
         elif labels == 'edges_nodes':
             return self._random_walk_with_label_edges_nodes(node, steps)
 
-    def generate_random_batch(self, batch_size, window_size, steps, walk_ids, doc_id, graph_labels = None):
+    def generate_random_batch(self, batch_size, window_size, steps, walk_ids, doc_id, graph_labels=None):
         '''
         Generates a (random) batch and labels for AWE distributed model.
 
@@ -332,12 +334,12 @@ class AnonymousWalks(object):
         batch = np.ndarray(shape=(batch_size, window_size + 1), dtype=np.int32)
         labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
 
-        batch[:, window_size] = doc_id # last column is for document id
+        batch[:, window_size] = doc_id  # last column is for document id
 
         # create a batch and labels
-        i = 0 # number of samples in the batch
+        i = 0  # number of samples in the batch
         while i < batch_size:
-            node = random.choice(self.rw_graph.nodes()) # choose random node
+            node = random.choice(self.rw_graph.nodes())  # choose random node
             # generate anonymous walks from this node
             aw = [walk_ids[self._anonymous_walk(node, steps, graph_labels)] for _ in range(window_size + 1)]
             batch[i, :window_size] = aw[:window_size]
@@ -355,12 +357,12 @@ class AnonymousWalks(object):
         if steps not in self.paths:
             raise ValueError("Create all possible AW first with {}".format(self._all_paths.__name__))
 
-        N = len(self.rw_graph) # nodes
+        N = len(self.rw_graph)  # nodes
 
         batch = np.ndarray(shape=(N, window_size + 1), dtype=np.int32)
         labels = np.ndarray(shape=(N, 1), dtype=np.int32)
 
-        batch[:, window_size] = doc_id # last column is for document id
+        batch[:, window_size] = doc_id  # last column is for document id
 
         # create a batch and labels
         for i, node in enumerate(self.rw_graph):
@@ -384,7 +386,8 @@ class AnonymousWalks(object):
         self.create_random_walk_graph()
         with open(output, 'w+') as f:
             for i, node in enumerate(self.rw_graph):
-                aw = Counter([str(walk_ids[self._anonymous_walk(node, steps, labels)]) for _ in range(neighborhood_size)])
+                aw = Counter(
+                    [str(walk_ids[self._anonymous_walk(node, steps, labels)]) for _ in range(neighborhood_size)])
                 f.write('{}\n'.format(aw.most_common(1)[0][0]))
 
     def generate_file_batch(self, batch_size, window_size, doc_id, corpus_fn, number_nodes):
@@ -400,7 +403,7 @@ class AnonymousWalks(object):
         # len(lines) - 1 number of stored neighborhoods
         if len(lines) <= 1:
             print(lines, corpus_fn)
-        c = Counter(np.random.choice(range(len(lines) - 1), size = batch_size))
+        c = Counter(np.random.choice(range(len(lines) - 1), size=batch_size))
         for line_idx in c:
             line = lines[line_idx]
             # line = linecache.getline(corpus_fn, line_idx+1)
@@ -483,8 +486,8 @@ class AnonymousWalks(object):
             print('Total walks of size {} in a graph:'.format(steps), len(all_walks))
         return walks
 
-    def embed(self, steps, method = 'exact', MC = None, delta = 0.1, eps = 0.1,
-              prop=True, labels = None, keep_last = False, verbose = True):
+    def embed(self, steps, method='exact', MC=None, delta=0.1, eps=0.1,
+              prop=True, labels=None, keep_last=False, verbose=True):
         '''Get embeddings of a graph using anonymous walk distribution.
         method can be sampling, exact
         steps is the number of steps.
@@ -524,13 +527,13 @@ class AnonymousWalks(object):
             if verbose:
                 print("Use exact method to get vector representation.")
             start = time.time()
-            patterns = self._exact(steps, labels = labels, prop=prop, verbose=verbose)
+            patterns = self._exact(steps, labels=labels, prop=prop, verbose=verbose)
             finish = time.time()
             if verbose:
                 print('Spent {} sec to get vector representation via exact method.'.format(round(finish - start, 2)))
         else:
-            raise ValueError("Wrong method for AnonymousWalks.\n You should choose between {} methods".format(', '.join(self.__methods)))
-
+            raise ValueError("Wrong method for AnonymousWalks.\n You should choose between {} methods".format(
+                ', '.join(self.__methods)))
 
         vector = []
         if verbose:
@@ -538,6 +541,7 @@ class AnonymousWalks(object):
         for path in self.paths[steps]:
             vector.append(patterns.get(tuple(path), 0))
         return vector, {'meta-paths': self.paths[steps]}
+
 
 class GraphKernel(object):
     '''
@@ -549,12 +553,13 @@ class GraphKernel(object):
         matrix E by self.embeddings = E)
     - saving/loading embeddings/kernel matrix to the file in compressed format
     '''
-    def __init__(self, graphs = None):
+
+    def __init__(self, graphs=None):
         self.gv = AnonymousWalks()
         self.graphs = graphs
         self.__methods = ['linear', 'rbf', 'poly']
 
-    def kernel_value(self, v1, v2, method = 'linear', sigma = 'auto', c = 0, d = 2):
+    def kernel_value(self, v1, v2, method='linear', sigma='auto', c=0, d=2):
         '''Calculates kernel value between two vectors. Methods can be linear, rbf, poly. '''
         if sigma == 'auto':
             sigma = self.embeddings.shape[1]
@@ -562,13 +567,14 @@ class GraphKernel(object):
         if method == 'linear':
             return np.array(v1).dot(v2)
         elif method == 'poly':
-            return (np.array(v1).dot(v2) + c)**d
+            return (np.array(v1).dot(v2) + c) ** d
         elif method == 'rbf':
             return np.exp(-np.linalg.norm(np.array(v1) - v2) ** 2 / sigma)
         else:
-            raise ValueError("Wrong method for Graph Kernel.\n You should choose between {} methods".format(', '.join(self.__methods)))
+            raise ValueError("Wrong method for Graph Kernel.\n You should choose between {} methods".format(
+                ', '.join(self.__methods)))
 
-    def read_graphs(self, filenames = None, folder = None, ext = None, header=True, weights=True, sep=',', directed=False):
+    def read_graphs(self, filenames=None, folder=None, ext=None, header=True, weights=True, sep=',', directed=False):
         '''Read graph from the list of files or from the folder.
         If filenames is not None, then read graphs from the list in filenames.
         Then, if folder is not None, then read files from the folder. If extension is specified, then read only files with this extension.
@@ -604,31 +610,34 @@ class GraphKernel(object):
                         G = self.gv.read_graph_from_text(folder + '/' + item, header, weights, sep, directed)
                     self.graphs.append(G)
 
-    def embed_graphs(self, graph2vec_method = 'exact', steps = 3, MC = None, delta = 0.1, eps = 0.1,
-                     labels=None, prop=True, keep_last = False):
+    def embed_graphs(self, graph2vec_method='exact', steps=3, MC=None, delta=0.1, eps=0.1,
+                     labels=None, prop=True, keep_last=False):
         '''Construct embeddings matrix using anonymous walk distribution.'''
         if hasattr(self, 'graphs'):
             print('Using {} method to get graph embeddings'.format(graph2vec_method))
             N = len(self.graphs)
             self.gv.graph = self.graphs[0]
-            v, d = self.gv.embed(steps = steps, method = graph2vec_method, MC = MC, delta = delta, eps = eps, prop=prop, labels=labels, verbose=False, keep_last = keep_last)
+            v, d = self.gv.embed(steps=steps, method=graph2vec_method, MC=MC, delta=delta, eps=eps, prop=prop,
+                                 labels=labels, verbose=False, keep_last=keep_last)
             if MC:
                 print('Use {} ({}) samples'.format(MC, self.gv.n_samples(steps, delta, eps)))
             L = len(v)
             print('Dimension size: {}'.format(L))
-            self.embeddings = np.zeros(shape=(N,L))
+            self.embeddings = np.zeros(shape=(N, L))
             self.embeddings[0] = v
             for ix, G in enumerate(self.graphs[1:]):
                 if ix % 10 == 0:
                     print('Processing {} graph'.format(ix))
                 self.gv.graph = G
-                v, d = self.gv.embed(steps = steps, method = graph2vec_method, MC = MC, delta = delta, eps = eps, prop=prop, labels=labels, verbose=False, keep_last = keep_last)
-                self.embeddings[ix+1] = v
+                v, d = self.gv.embed(steps=steps, method=graph2vec_method, MC=MC, delta=delta, eps=eps, prop=prop,
+                                     labels=labels, verbose=False, keep_last=keep_last)
+                self.embeddings[ix + 1] = v
         else:
             raise ValueError('Please, first run read_graphs to create graphs.')
 
-    def kernel_matrix(self, kernel_method = 'rbf', build_embeddings = False, steps = 3, graph2vec_method = 'exact', MC = None, delta = 0.1, eps = 0.1,
-                      prop=True, labels = None,  keep_last = False, sigma = 'auto', c=0, d=2):
+    def kernel_matrix(self, kernel_method='rbf', build_embeddings=False, steps=3, graph2vec_method='exact', MC=None,
+                      delta=0.1, eps=0.1,
+                      prop=True, labels=None, keep_last=False, sigma='auto', c=0, d=2):
         '''Computes a kernel matrix for a given matrix of embeddings.
 
         :param kernel_method: rbf, linear, poly
@@ -649,10 +658,11 @@ class GraphKernel(object):
         '''
 
         if build_embeddings:
-            self.embed_graphs(graph2vec_method=graph2vec_method, steps=steps, MC = MC, delta = delta, eps = eps, labels = labels, prop=prop, keep_last=keep_last)
+            self.embed_graphs(graph2vec_method=graph2vec_method, steps=steps, MC=MC, delta=delta, eps=eps,
+                              labels=labels, prop=prop, keep_last=keep_last)
 
         N = self.embeddings.shape[0]
-        self.K = np.zeros(shape=(N,N))
+        self.K = np.zeros(shape=(N, N))
 
         for i in range(N):
             for j in range(i, N):
@@ -671,7 +681,7 @@ class GraphKernel(object):
 
     def write_kernel_matrix(self, filename):
         try:
-            np.savez_compressed(filename, K = self.K)
+            np.savez_compressed(filename, K=self.K)
         except:
             pass
 
@@ -683,14 +693,16 @@ class GraphKernel(object):
         self.K = np.load(filename)['K']
         return self.K
 
+
 class Evaluation(object):
     '''
     Evaluating a Kernel matrix on SVM classification accuracy.
-    
-    By providing a Kernel matrix M and labels y on initialization, 
+
+    By providing a Kernel matrix M and labels y on initialization,
     you can run self.evaluate(k=10) to get accuracy results on k=10
     cross validation test sets of your matrix.
     '''
+
     def __init__(self, matrix, labels, verbose=False):
         '''
         Initialize evaluation.
@@ -754,7 +766,6 @@ class Evaluation(object):
             train_val_range = [ix for ix in range(N) if ix not in test_range]
             K_train_val = K[np.ix_(train_val_range, train_val_range)]
             y_train_val = y[train_val_range]
-
 
             K_test = K[np.ix_(test_range, train_val_range)]
             y_test = y[test_range]
@@ -822,11 +833,11 @@ class Evaluation(object):
 if __name__ == '__main__':
     np.random.seed(0)
 
-    TRIALS = 10 # number of cross-validation
+    TRIALS = 10  # number of cross-validation
 
     STEPS = 10
     DATASET = 'mutag'
-    METHOD  = 'sampling'
+    METHOD = 'sampling'
     LABELS = None
     PROP = True
     MC = 10000
@@ -837,23 +848,23 @@ if __name__ == '__main__':
     root = '../Datasets/'
     RESULTS_FOLDER = 'kernel_results/'
 
+    parser = argparse.ArgumentParser(description='Getting classification accuracy for Graph Kernel Methods')
+    parser.add_argument('--dataset', default=DATASET, help='Dataset with graphs to classify')
+    parser.add_argument('--steps', default=STEPS, help='Number of steps for anonymous walk', type=int)
 
-    parser = argparse.ArgumentParser(description = 'Getting classification accuracy for Graph Kernel Methods')
-    parser.add_argument('--dataset', default = DATASET, help = 'Dataset with graphs to classify')
-    parser.add_argument('--steps', default = STEPS, help = 'Number of steps for anonymous walk', type = int)
-
-    parser.add_argument('--proportion', default = PROP, help = 'Convert embeddings to be in [0,1]', type = bool)
-    parser.add_argument('--labels', default = LABELS, help = 'Labels: edges, nodes, edges_nodes')
+    parser.add_argument('--proportion', default=PROP, help='Convert embeddings to be in [0,1]', type=bool)
+    parser.add_argument('--labels', default=LABELS, help='Labels: edges, nodes, edges_nodes')
 
     parser.add_argument('--method', default=METHOD, help='Method to get distribution of AW: sampling or exact')
-    parser.add_argument('--MC', default = MC, help = 'Number of times to run random walks for each node', type = int)
-    parser.add_argument('--delta', default=DELTA, help='Probability of error to estimate number of samples.', type = float)
-    parser.add_argument('--epsilon', default=EPSILON, help='Delta of deviation to estimate number of samples.', type = float)
+    parser.add_argument('--MC', default=MC, help='Number of times to run random walks for each node', type=int)
+    parser.add_argument('--delta', default=DELTA, help='Probability of error to estimate number of samples.',
+                        type=float)
+    parser.add_argument('--epsilon', default=EPSILON, help='Delta of deviation to estimate number of samples.',
+                        type=float)
     parser.add_argument('--C', default=C, help='Free term of polynomial kernel.', type=float)
     parser.add_argument('--D', default=D, help='Power of polynomial kernel.', type=float)
     parser.add_argument('--root', default=root, help='Root folder of dataset')
     parser.add_argument('--results_folder', default=RESULTS_FOLDER, help='Folder to store results')
-
 
     args = parser.parse_args()
 
@@ -868,7 +879,7 @@ if __name__ == '__main__':
     C = args.C
     D = args.D
     root = args.root
-    RESULTS_FOLDER  = args.results_folder
+    RESULTS_FOLDER = args.results_folder
 
     print('Dataset', 'Steps', 'MC', 'Labels')
     print(DATASET, STEPS, MC, LABELS)
@@ -898,9 +909,9 @@ if __name__ == '__main__':
 
     # create an instance of a graph kernel and read all graphs
     gk = GraphKernel()
-    gk.read_graphs(filenames = None, folder=root + DATASET, ext='graphml')
-    gk.embed_graphs(graph2vec_method = METHOD, steps = STEPS, MC = MC, delta = DELTA, eps = EPSILON,
-                     labels=LABELS, prop=True, keep_last = True)
+    gk.read_graphs(filenames=None, folder=root + DATASET, ext='graphml')
+    gk.embed_graphs(graph2vec_method=METHOD, steps=STEPS, MC=MC, delta=DELTA, eps=EPSILON,
+                    labels=LABELS, prop=True, keep_last=True)
 
     ### testing on embeddings
     for _ in range(3):
@@ -911,7 +922,7 @@ if __name__ == '__main__':
         E_test = E[idx_test, :]
         y_test = y[idx_test]
 
-        model = svm.SVC(kernel='rbf', gamma = 0.001)
+        model = svm.SVC(kernel='rbf', gamma=0.001)
         model.fit(E_train, y_train)
         y_predicted = model.predict(E_test)
         print('On Embeddings:', accuracy_score(y_test, y_predicted))
@@ -960,8 +971,8 @@ if __name__ == '__main__':
                                                         np.mean(optimal_test_scores), np.std(optimal_test_scores),
                                                         finish2kernelmatrix - start2kernelmatrix))
             print()
-        # except Exception as e:
-        #     print('ERROR FOR', dataset, KERNEL, steps)
-        #     raise e
+            # except Exception as e:
+            #     print('ERROR FOR', dataset, KERNEL, steps)
+            #     raise e
 
     console = []
