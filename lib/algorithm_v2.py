@@ -20,6 +20,7 @@ class QLearningTrainer:
     def train_on_batch(self, batch_size = 100, step=True, **kwargs):
         #graph_emb = self.agent.embed_graph(problem.edges, **kwargs)  # {vertex_id -> vector[num_units]}
         #walk_emb = self.agent.embed_walk(problem.walk, **kwargs)     # matrix[walk_length, units]
+        
         #sample from replay buffer
 
         batch = self.agent.buffer.sample(batch_size)
