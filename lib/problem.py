@@ -84,3 +84,28 @@ def generate_erdos_renyi_problems(num_vertices=10, edge_prob=0.2,
 
         problem.reset()
         yield problem
+
+def generate_regular_problems(num_vertices=10, degree=3,
+                                  walk_length_range=None, verify_heapsearch_budget=None):
+    walks = generate_anonymous_walks(num_vertices)
+    if walk_length_range is not None:
+        walks = [walk for walk in walks if walk_length_range[0] <= len(walk) <= walk_length_range[1]]
+
+    while True:
+        walk = random.choice(walks)
+        graph = connect_graph(nx.random_regular_graph(degree, num_vertices))
+        graph_edges = defaultdict(set)
+        for v1, v2 in graph.edges:
+            graph_edges[v1].add(v2)
+            graph_edges[v2].add(v1)
+
+        initial_vertex = random.choice(sorted(graph_edges.keys()))
+        problem = GAWProblem(graph_edges, walk, initial_vertex)
+
+        if verify_heapsearch_budget is not None:
+            solution, _ = solve_heapsearch(problem, max_steps=verify_heapsearch_budget)
+            if len(solution) < len(walk):
+                continue
+
+        problem.reset()
+        yield problem
