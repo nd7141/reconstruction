@@ -40,6 +40,8 @@ class GAWProblem:
         self.path.append(chosen_next_vertex)
         is_done = len(self.get_valid_actions()) == 0
         reward = 1.0 / len(self.walk)
+        if len(self.path) == len(self.walk):
+            reward += 100
         return chosen_next_vertex, reward, is_done, {}
 
     def render(self):
