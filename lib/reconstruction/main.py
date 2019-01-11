@@ -6,6 +6,8 @@ import networkx as nx
 import numpy as np
 import sklearn
 
+import re
+
 from lib.reconstruction.AnonymousWalkKernel import AnonymousWalks as AW
 from collections import defaultdict as ddict, Counter
 import random
@@ -117,6 +119,7 @@ def covering_walk(graph, source):
     node2anon = {source: 0}
     anon2node = {0: source}
     checked = dict()  # nodes that has been checked for edge
+    degrees = graph.degree()
     while len(S) > 0:  # grow supporting walk in DFS manner
         curr = S[-1]
         x = max(P) + 1  # next node to check
@@ -128,8 +131,14 @@ def covering_walk(graph, source):
                 checked.setdefault(curr, set()).add(u)
 
         # check if there is a node in the neighborhood that has not been explored yet
+
         Ncurr = list(nx.neighbors(graph, anon2node[curr]))
-        random.shuffle(Ncurr)
+        if random.uniform(0, 1) < 0.05:
+            random.shuffle(Ncurr) # option 1: random order
+        else:
+            Ncurr = sorted(Ncurr, key = lambda v: degrees[v], reverse=True) # option 2: top-degree
+            # Ncurr = sorted(Ncurr, key=lambda v: degrees[v], reverse=False)  # option 3: low-degree
+        # print(anon2node[curr], Ncurr)
         for neighbor in Ncurr:
             if neighbor in node2anon:
                 continue # already visited
@@ -363,8 +372,15 @@ def label_dataset(graphs):
             if res:
                 labels[j] = curr_label
         curr_label += 1
+        print(i)
 
     return labels
+
+def relabel_graph(G):
+    nodes = list(G.nodes())
+    new_order = random.sample(G.nodes(), G.order())
+    mapping = {nodes[i]: new_order[i] for i in range(len(new_order))}
+    return nx.relabel_nodes(G, mapping)
 
 # https://gist.github.com/zachguo/10296432
 def print_cm(cm, labels, hide_zeroes=False, hide_diagonal=False, hide_threshold=None):
@@ -390,6 +406,11 @@ def print_cm(cm, labels, hide_zeroes=False, hide_diagonal=False, hide_threshold=
             print(cell, end=' ')
         print()
 
+def print_cm2(cm):
+    tn, fp, fn, tp = cm.ravel()
+    print('p\\t\t1\t0')
+    print('1\t', tp, fp)
+    print('0\t', fn, tn)
 
 if __name__ == '__main__':
     random.seed(0)
@@ -452,22 +473,68 @@ if __name__ == '__main__':
     # print(graph_isomorphism_algorithm_covers(G2, G2))
     # print(graph_isomorphism_algorithm_covers(G1, G2))
 
+    # experiment 0:
+    # graph_dir = '../../../reconstruction-data/reg_graphs_n80_d3/'
+    # names = os.listdir(graph_dir)
+    # regulars = [nx.read_edgelist(graph_dir + fn) for fn in names]
+    # preds = []
+    # truth = []
+    # for it in range(1000):
+    #     i, j = random.choices(range(len(regulars)), k=2)
+    #     gt = (i==j)*1
+    #     pred = graph_isomorphism_algorithm_covers(regulars[i], regulars[j], 10)
+    #     print(it, gt, pred)
+    #     preds.append(pred)
+    #     truth.append(gt)
+    #
+    # cm = sklearn.metrics.confusion_matrix(truth, preds)
+    # print_cm(cm, set(truth))
+
+    # experiment: generate regular graphs of different size and test when algo does not work
+    # for N in range(10, 101, 10):
+    #     G = nx.random_regular_graph(3, N)
+    #     G2 = relabel_graph(G)
+    #     print(N, graph_isomorphism_algorithm_covers(G, G2, 10))
+
+    graph_dir = '../../../reconstruction-data/regulars/'
+    fns = os.listdir(graph_dir)
+    file_mapping = ddict(list)
+    for n_vert, fn in [(int(re.findall('\d+', fn)[0]), fn) for fn in fns]:
+        file_mapping[n_vert].append(fn)
+
+    n_pairs = 50
+    ground = []
+    preds = []
+    for n in range(10, 101, 10):
+        for _ in range(n_pairs):
+            fn1, fn2 = random.sample(file_mapping[n], 2)
+            t1, t2 = int(re.findall('t\d+', fn1)[0][1:]), int(re.findall('t\d+', fn2)[0][1:])
+            ground.append((t1 == t2)*1)
+            G1, G2 = nx.read_edgelist(graph_dir + fn1), nx.read_edgelist(graph_dir + fn2)
+            preds.append(graph_isomorphism_algorithm_covers(G1, G2)*1)
+            # print(n, _, ground[-1], preds[-1])
+        # print(n, ground[-n_pairs:], preds[-n_pairs:])
+        cm = sklearn.metrics.confusion_matrix(ground, preds)
+        print('N: ', n)
+        print_cm2(cm)
+
+
     # Experiment 1: small regular graphs
-    names = os.listdir('../../reg_graphs_n8_d3/')
-    regulars = []
-    for i, fn in enumerate(names):
-        if fn.endswith('edgelist'):
-            regulars.append(nx.read_edgelist('../../reg_graphs_n8_d3/' + fn))
-        # if i > 10:
-        #     break
-    print('Read all graphs')
+    # names = os.listdir('../../reg_graphs_n8_d3/')
+    # regulars = []
+    # for i, fn in enumerate(names):
+    #     if fn.endswith('edgelist'):
+    #         regulars.append(nx.read_edgelist('../../reg_graphs_n8_d3/' + fn))
+    #     # if i > 10:
+    #     #     break
+    # print('Read all graphs')
 
 
-    truth = []
-    with open('../../reg_graphs_n8_d3/labels.txt') as f:
-        for line in f:
-            if line:
-                truth.append(line.strip())
+    # truth = []
+    # with open('../../reg_graphs_n8_d3/labels.txt') as f:
+    #     for line in f:
+    #         if line:
+    #             truth.append(line.strip())
 
     # ix = 0
     # G = regulars[ix]
@@ -497,6 +564,8 @@ if __name__ == '__main__':
     # cm = sklearn.metrics.confusion_matrix(converted_truth, preds)
     # print("time:", end-start)
     # print('confusion matrix')
+    # print(tp, fp)
+    # print(fn, tn)
     # print_cm(cm, set(converted_truth))
     #RESULTS#####################
     # output (10 samples per node)
@@ -511,28 +580,51 @@ if __name__ == '__main__':
     #               0     1
     #         0   880     0
     #         1     2   118
+    # degree-policy experiment (n=10)
+    # time: 0.001985311508178711
+    # confusion matrix
+    # truth\pred     0     1
+    #         0   880     0
+    #         1     6   114
 
 
     # experiment 2: hard graphs of medium size (~ 100 nodes)
     # save_dir = '../../cfi-rigid-r2-iso-edges/'
     # fns = sorted(filter(lambda fn: fn.startswith('cfi'), os.listdir(save_dir)))
-    #
+
     # G1, G2 = nx.read_edgelist(save_dir + fns[2]), nx.read_edgelist(save_dir + fns[2 + 1])
     # start = time.time()
-    # is_iso = graph_isomorphism_algorithm_covers(G1, G2, samples_per_node=1000)
+    # is_iso = graph_isomorphism_algorithm_covers(G1, G2, samples_per_node=10)
     # end = time.time()
     # print(is_iso, end-start)
     # RESULTS#######################
     # output: False 112.35075759887695
 
+    # times = []
+    # preds = []
+    # for i in range(0, len(fns), 2):
+    #     G1, G2 = nx.read_edgelist(save_dir + fns[i]), nx.read_edgelist(save_dir + fns[i + 1])
+    #     start = time.time()
+    #     # is_iso = nx.is_isomorphic(G1, G2)
+    #     is_iso = graph_isomorphism_algorithm_covers(G1, G2, samples_per_node=1)
+    #     end = time.time()
+    #     preds.append(is_iso)
+    #     times.append(end-start)
+    #     print(i, is_iso, end-start, G1.order(), G1.size())
+    # print(sum(preds))
+    # print(sum(times)/len(times))
+    ####RESULTS#########################
+    # covers algo: up to 72 pair result false for all ~10sec-10min (72<= n<=720)
+    # nx.is_isomorphic: true for 2 pairs, 8th pairs takes more than 30 minutes
+
 
     # experiment 3: easy graphs of medium size (70 nodes)
-    truth = []
-    preds = []
-    save_dir = '../../er_graphs_n70/'
-    fns = sorted(filter(lambda fn: fn.endswith('edgelist'), os.listdir(save_dir)))
-    ix = 0
-    G = nx.read_edgelist(save_dir + fns[ix])
+    # truth = []
+    # preds = []
+    # save_dir = '../../er_graphs_n70/'
+    # fns = sorted(filter(lambda fn: fn.endswith('edgelist'), os.listdir(save_dir)))
+    # ix = 0
+    # G = nx.read_edgelist(save_dir + fns[ix])
     # tp = fp = tn = fn = 0
     # for i in range(len(fns)):
     #     test_graph = nx.read_edgelist(save_dir + fns[i])
@@ -550,7 +642,7 @@ if __name__ == '__main__':
     #             tn += 1
     #     preds.append(pred*1)
     #     truth.append(true*1)
-
+    #
     # print(tp, fp)
     # print(fn, tn)
 
@@ -566,11 +658,13 @@ if __name__ == '__main__':
     #RESULTS##############
     # output: true for all
 
-    for n in range(10, 31, 5):
-        G = connect_graph(nx.erdos_renyi_graph(n, 0.3))
-        print(n, graph_isomorphism_algorithm_covers(G, G, 1000))
+    # for n in range(10, 101, 5):
+    #     G = connect_graph(nx.erdos_renyi_graph(n, 0.3))
+    #     print(n, graph_isomorphism_algorithm_covers(G, G, 1))
     #RESULTS###############
     # output: true only for n=10 (10 samples) and n-10,15 (for 100 samples)
+    # output: true for all if we select degree policy
+
 
 
     # total = 0
