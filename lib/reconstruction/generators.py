@@ -6,7 +6,7 @@ import random
 import pandas as pd
 
 
-from .main import replace
+from main import replace
 
 
 def connect_graph(graph):
@@ -105,7 +105,7 @@ def generate_anonymous_walks(n_vertices, save_to_file=None, path=None):
     return walks + branched_walks
 
 
-def generate_regular_graphs(n_graphs, n_vertices, degree, save_to_files=None, graph_dir=None):
+def generate_regular_graphs(n_graphs, n_vertices, degree, graph_dir=None):
     '''
     Generates random graphs with same degree.
     See here for the number of distinct graphs for n and d.
@@ -119,7 +119,8 @@ def generate_regular_graphs(n_graphs, n_vertices, degree, save_to_files=None, gr
     '''
     graphs = [nx.random_regular_graph(degree, n_vertices)
               for _ in range(n_graphs)]
-    if save_to_files:
+    if graph_dir:
+        print(graph_dir)
         if not os.path.exists(graph_dir):
             os.mkdir(graph_dir)
         [nx.write_edgelist(G, '{}/{}.edgelist'.format(graph_dir, ix)) for ix, G in enumerate(graphs)]
@@ -140,15 +141,45 @@ def read_dimacs_graph(filename):
                 raise Exception
     return G
 
+def relabel_graph(G):
+    nodes = list(G.nodes())
+    new_order = random.sample(G.nodes(), G.order())
+    mapping = {nodes[i]: new_order[i] for i in range(len(new_order))}
+    return nx.relabel_nodes(G, mapping)
+
+def generate_regular_dataset(graph_dir, nv_range, ng_range, degree):
+    if not os.path.exists(graph_dir):
+        os.mkdir(graph_dir)
+    sizes = nv_range
+    orders = ng_range
+    D = degree
+    for ix in range(10):
+        print(ix)
+        NG = orders[ix]
+        NV = sizes[ix]
+        graphs = generate_regular_graphs(NG, NV, degree=D)
+        if NV <= 50:
+            total = 0
+            for l in range(len(graphs) - 1):
+                is_iso = nx.is_isomorphic(graphs[l], graphs[l + 1])
+                total += is_iso * 1
+            if total > 0:
+                raise Exception("Found iso graphs in random regular graphs {} {}.\nRepeat experiment.".format(NG, NV))
+
+        for t in range(len(graphs)):
+            for c in range(5):
+                g_copy = relabel_graph(graphs[t])
+                nx.write_edgelist(g_copy, './regulars/regular_n{}_d{}_t{}_c{}.edgelist'.format(NV, D, t, c))
+
 
 if __name__ == '__main__':
 
     NG = 1000 # number of graphs
-    NV = 8 # number of vertices
+    NV = 80 # number of vertices
     D = 3 # degree of vertices
 
-    # graphs = generate_ER_graphs(NG, NV, prob=0.2, save_to_files=True, graph_dir='er_graphs_n10')
-    graphs = generate_regular_graphs(NG, NV, D, save_to_files=True, graph_dir='reg_graphs_n8_d3')
+    # graphs = generate_ER_graphs(NG, NV, prob=0.2, save_to_files=True, graph_dir='er_graphs_n70')
+    # graphs = generate_regular_graphs(NG, NV, D, save_to_files=True, graph_dir='reg_graphs_n8_d3')
     # print('Statistics on generated graphs')
     # print('Nodes histogram:', Counter([_.order() for _ in graphs]))
     # print('Nodes mean:', np.mean([_.order() for _ in graphs]))
@@ -163,16 +194,40 @@ if __name__ == '__main__':
     #     ls= [len(line.strip().split(',')) for line in f]
     # print(Counter(ls))
 
-    data_dir = '../data-reconstruction/cfi-rigid-d3'
-    # G = read_dimacs_graph('data/cfi-rigid-z2/cfi-rigid-z2-0088-01-1')
+    # generate regular dataset
+    # D = 3
+    # sizes = list(range(10, 101, 10))
+    # orders = [5, 15, 20, 20, 20, 20, 20, 20, 20, 40]
+    # generate_regular_dataset('regulars/', sizes, orders, D)
 
-    if not os.path.exists(data_dir + '-edges/'):
-        os.mkdir(data_dir + '-edges/')
 
-    files = os.listdir(data_dir)
-    for i, fn in enumerate(files):
-        print(i)
-        G = read_dimacs_graph(data_dir + '/' + fn)
-        nx.write_edgelist(G, '{}-edges/{}'.format(data_dir, fn))
+    # generate_regular_graphs(10, NV, D, graph_dir='./reg_graphs_n80_d3/')
 
-    print(G.order(), G.size())
+    # data_dir = '../../cmz/'
+    # save_dir = '../../cmz-edges/'
+    #
+    # if not os.path.exists(save_dir):
+    #     os.mkdir(save_dir)
+    #
+    # sizes = []
+    # for fn in os.listdir(data_dir):
+    #     if fn.startswith('cmz'):
+    #         G = read_dimacs_graph(data_dir + fn)
+    #         sizes.append((G.order(), G.size()))
+    #         nx.write_edgelist(G, save_dir + fn)
+    #
+    #
+    # print(Counter(sizes))
+
+    # # G = read_dimacs_graph('data/cfi-rigid-z2/cfi-rigid-z2-0088-01-1')
+    #
+    # if not os.path.exists(data_dir + '-edges/'):
+    #     os.mkdir(data_dir + '-edges/')
+    #
+    # files = os.listdir(data_dir)
+    # for i, fn in enumerate(files):
+    #     print(i)
+    #     G = read_dimacs_graph(data_dir + '/' + fn)
+    #     nx.write_edgelist(G, '{}-edges/{}'.format(data_dir, fn))
+    #
+    # print(G.order(), G.size())
