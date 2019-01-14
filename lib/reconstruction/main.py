@@ -123,34 +123,35 @@ def covering_walk(graph, source):
     while len(S) > 0:  # grow supporting walk in DFS manner
         curr = S[-1]
         x = max(P) + 1  # next node to check
-        for u in range(curr + 1, x):  # u is already in the supporting walk
+
+        # check if there is a node in the neighborhood that has not been explored yet
+        Ncurr = list(nx.neighbors(graph, anon2node[curr]))
+        if random.uniform(0, 1) < 0.99:
+            random.shuffle(Ncurr)  # option 1: random order
+        else:
+            Ncurr = sorted(Ncurr, key=lambda v: degrees[v], reverse=True)  # option 2: top-degree
+            # Ncurr = sorted(Ncurr, key=lambda v: degrees[v], reverse=False)  # option 3: low-degree
+        # print(anon2node[curr], Ncurr)
+        for neighbor in Ncurr:
+            if neighbor in node2anon:
+                continue  # already visited
+            else:
+                node2anon[neighbor] = x
+                anon2node[x] = neighbor
+                S.append(x)
+                checked.setdefault(curr, set()).add(x)
+                P = replace(P, curr, x)  # move to it
+                break
+        else:
+            S.pop()  # move back in the stack
+
+        for u in range(x-1, curr, -1):  # u is already in the supporting walk
             # check if there is connection to already discovered nodes
             if u not in checked[curr]:  # see if we already checked this edge
                 if anon2node[u] in graph[anon2node[curr]]:
                     P = replace(P, curr, u)
                 checked.setdefault(curr, set()).add(u)
 
-        # check if there is a node in the neighborhood that has not been explored yet
-
-        Ncurr = list(nx.neighbors(graph, anon2node[curr]))
-        if random.uniform(0, 1) < 0.05:
-            random.shuffle(Ncurr) # option 1: random order
-        else:
-            Ncurr = sorted(Ncurr, key = lambda v: degrees[v], reverse=True) # option 2: top-degree
-            # Ncurr = sorted(Ncurr, key=lambda v: degrees[v], reverse=False)  # option 3: low-degree
-        # print(anon2node[curr], Ncurr)
-        for neighbor in Ncurr:
-            if neighbor in node2anon:
-                continue # already visited
-            else:
-                node2anon[neighbor] = x
-                anon2node[x] = neighbor
-                S.append(x)
-                checked.setdefault(curr, set()).add(x)
-                P = replace(P, curr, x) # move to it
-                break
-        else:
-            S.pop() # move back in the stack
     cover = [anon2node[v] for v in P]
     return cover, P
 
@@ -454,15 +455,26 @@ if __name__ == '__main__':
     # aws_in_graph = check_corpus_of_aw(G, '0', aws)
     # print(Counter(aws_in_graph.values()))
 
-    G1 = nx.read_edgelist('../../test/regular6_1.txt')
-    G2 = nx.read_edgelist('../../test/regular6_2.txt')
-    G3 = nx.read_edgelist('../../test/so_1.txt')
-    G4 = nx.read_edgelist('../../test/so_2.txt')
+    # G1 = nx.read_edgelist('../../test/regular6_1.txt')
+    # G2 = nx.read_edgelist('../../test/regular6_2.txt')
+    # G3 = nx.read_edgelist('../../test/so_1.txt')
+    # G4 = nx.read_edgelist('../../test/so_2.txt')
 
     # G1 = nx.convert_node_labels_to_integers(G1)
     # G2 = nx.convert_node_labels_to_integers(G2)
     # G3 = nx.convert_node_labels_to_integers(G3)
     # G4 = nx.convert_node_labels_to_integers(G4)
+
+    G = nx.read_edgelist('../../reg_graphs_n8_d3/1.edgelist')
+    # print(covering_walk(G, '0'))
+
+    G = nx.Graph()
+    G.add_path(['0','1','2','3'])
+    G.add_edge('0','2')
+    G.add_edge('0', '3')
+
+    for _ in range(10):
+        print(covering_walk(G, '0'))
 
 
     # print(graph_isomorphism_algorithm_covers(G3, G3))
@@ -496,27 +508,27 @@ if __name__ == '__main__':
     #     G2 = relabel_graph(G)
     #     print(N, graph_isomorphism_algorithm_covers(G, G2, 10))
 
-    graph_dir = '../../../reconstruction-data/regulars/'
-    fns = os.listdir(graph_dir)
-    file_mapping = ddict(list)
-    for n_vert, fn in [(int(re.findall('\d+', fn)[0]), fn) for fn in fns]:
-        file_mapping[n_vert].append(fn)
-
-    n_pairs = 50
-    ground = []
-    preds = []
-    for n in range(10, 101, 10):
-        for _ in range(n_pairs):
-            fn1, fn2 = random.sample(file_mapping[n], 2)
-            t1, t2 = int(re.findall('t\d+', fn1)[0][1:]), int(re.findall('t\d+', fn2)[0][1:])
-            ground.append((t1 == t2)*1)
-            G1, G2 = nx.read_edgelist(graph_dir + fn1), nx.read_edgelist(graph_dir + fn2)
-            preds.append(graph_isomorphism_algorithm_covers(G1, G2)*1)
-            # print(n, _, ground[-1], preds[-1])
-        # print(n, ground[-n_pairs:], preds[-n_pairs:])
-        cm = sklearn.metrics.confusion_matrix(ground, preds)
-        print('N: ', n)
-        print_cm2(cm)
+    # graph_dir = '../../../reconstruction-data/regulars/'
+    # fns = os.listdir(graph_dir)
+    # file_mapping = ddict(list)
+    # for n_vert, fn in [(int(re.findall('\d+', fn)[0]), fn) for fn in fns]:
+    #     file_mapping[n_vert].append(fn)
+    #
+    # n_pairs = 50
+    # ground = []
+    # preds = []
+    # for n in range(10, 101, 10):
+    #     for _ in range(n_pairs):
+    #         fn1, fn2 = random.sample(file_mapping[n], 2)
+    #         t1, t2 = int(re.findall('t\d+', fn1)[0][1:]), int(re.findall('t\d+', fn2)[0][1:])
+    #         ground.append((t1 == t2)*1)
+    #         G1, G2 = nx.read_edgelist(graph_dir + fn1), nx.read_edgelist(graph_dir + fn2)
+    #         preds.append(graph_isomorphism_algorithm_covers(G1, G2)*1)
+    #         # print(n, _, ground[-1], preds[-1])
+    #     # print(n, ground[-n_pairs:], preds[-n_pairs:])
+    #     cm = sklearn.metrics.confusion_matrix(ground, preds)
+    #     print('N: ', n)
+    #     print_cm2(cm)
 
 
     # Experiment 1: small regular graphs
