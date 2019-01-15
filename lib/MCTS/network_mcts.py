@@ -51,5 +51,5 @@ class Agent(nn.Module):
     def predict(self, embs):
         with torch.no_grad():
             pi, v = self.forward(embs)
-            #print(torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]) list with v value
+
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]

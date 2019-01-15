@@ -44,7 +44,6 @@ class MCTS():
 
         counts = [x**(1./temp) for x in counts]
         probs = [x/float(sum(counts)) for x in counts]
-        print(probs)
         return probs
 
 
@@ -64,7 +63,6 @@ class MCTS():
         Returns:
             v: the negative of the value of the current canonicalBoard
         """
-
         if len(path) == self.path_length:
             _, v = self.nnet.predict(utils_mcts.get_states_emb([list(path)], self.graph_emb))
             return v[0]
@@ -92,8 +90,6 @@ class MCTS():
                 print("All valid moves were masked, do workaround.")
                 self.Ps[path] = self.Ps[path] + valids
                 self.Ps[path] /= np.sum(self.Ps[path])
-            
-            print(self.Ps[path])
 
             self.Vs[path] = valids
             self.Ns[path] = 0
@@ -116,18 +112,17 @@ class MCTS():
                     best_act = a
 
         vertex = best_act
-        print(vertex)
         next_path = self.game.get_next_state(list(path), vertex)
 
 
         v = self.search(tuple(next_path))
 
-        if (path,a) in self.Qsa:
-            self.Qsa[(path,a)] = (self.Nsa[(path,a)]*self.Qsa[(path,a)] + v)/(self.Nsa[(path,a)]+1)
-            self.Nsa[(path,a)] += 1
+        if (path,vertex) in self.Qsa:
+            self.Qsa[(path,vertex)] = (self.Nsa[(path,vertex)]*self.Qsa[(path,vertex)] + v)/(self.Nsa[(path,vertex)]+1)
+            self.Nsa[(path,vertex)] += 1
         else:
-            self.Qsa[(path,a)] = v
-            self.Nsa[(path,a)] = 1
+            self.Qsa[(path,vertex)] = v
+            self.Nsa[(path,vertex)] = 1
 
         self.Ns[path] += 1
         return v

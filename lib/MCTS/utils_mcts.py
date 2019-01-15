@@ -13,6 +13,9 @@ class PathsBuffer(object):
         self.buffer.append(path)
         if len(self.buffer) > self.capacity:
             self.buffer.pop(0)
+    
+    def flush(self):
+        self.buffer = []
 
     def rank_path(self, path):
         #rank buffer by alphabetical walk order and select with reward 1
