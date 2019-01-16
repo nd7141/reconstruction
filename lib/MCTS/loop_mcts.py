@@ -62,7 +62,7 @@ for iteration in range(NUM_ITERS):
 
             out_pi, out_v = nnet(embs)
             loss_pi = -torch.sum(target_pis*out_pi)/target_pis.size()[0]
-            loss_v = torch.sum((targets_vs-out_v.view(-1))**2)/targets_vs.size()[0]
+            #loss_v = torch.sum((targets_vs-out_v.view(-1))**2)/targets_vs.size()[0]
             total_loss = loss_pi + loss_v
 
             #record losses
