@@ -155,6 +155,47 @@ def covering_walk(graph, source):
     cover = [anon2node[v] for v in P]
     return cover, P
 
+def cover2(graph, source):
+    random_walk = [source]
+    checked = ddict(list)
+    stack = [source]
+    visited = {source}
+    ranks = {0: source} # to attempt to get maximal cover (possible to do without rank, but then no guarantees on maximality)
+    revranks = {source: 0}
+
+    while len(stack) > 0:
+        last = stack[-1]
+        lastrank = revranks[last]
+        maxrank = max(ranks.keys()) + 1
+        Nlast = list(nx.neighbors(graph, last))
+        np.random.shuffle(Nlast) # here you can set any policy you want in which order to check neighbors
+
+        # going in depth
+        for neighbor in Nlast:
+            if neighbor not in visited: # found new node, then add it to the walk
+                random_walk.append(neighbor)
+                stack.append(neighbor)
+                checked[last].append(neighbor)
+                visited.add(neighbor)
+                ranks[maxrank] = neighbor
+                revranks[neighbor] = maxrank
+                break
+        else: # we didn't find any new neighbor and rollback
+            stack.pop()
+            if len(stack) > 0:
+                random_walk.append(stack[-1])
+                checked[last].append(stack[-1])
+
+        # interconnecting nodes that are already in walk
+        for r in range(maxrank-1, lastrank+1, -1):
+            node = ranks[r]
+            if node not in checked[last] and node in Nlast:
+                checked[last].append(node)
+                random_walk.extend([node, last])
+
+    covering_anonymous_walk = [revranks[u] for u in random_walk]
+    return covering_anonymous_walk, random_walk
+
 
 def connect_graph(graph):
     '''
@@ -413,6 +454,9 @@ def print_cm2(cm):
     print('1\t', tp, fp)
     print('0\t', fn, tn)
 
+
+
+
 if __name__ == '__main__':
     random.seed(0)
     G1 = nx.Graph()
@@ -473,8 +517,9 @@ if __name__ == '__main__':
     G.add_edge('0','2')
     G.add_edge('0', '3')
 
+    print(cover2(G1, 0))
     for _ in range(10):
-        print(covering_walk(G, '0'))
+        print(cover2(G1, 0))
 
 
     # print(graph_isomorphism_algorithm_covers(G3, G3))
