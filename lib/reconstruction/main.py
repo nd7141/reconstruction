@@ -6,6 +6,10 @@ import networkx as nx
 import numpy as np
 import sklearn
 
+import node2vec
+
+from gensim.models import Word2Vec
+
 import re
 
 from lib.reconstruction.AnonymousWalkKernel import AnonymousWalks as AW
@@ -113,7 +117,41 @@ def reconstruct_dfs2(graph, source, verbose=False):
             print('Current support:', P)
     return P
 
-def covering_walk(graph, source):
+def degree_policy(neighbors, degrees, reverse=True):
+    return sorted(neighbors, key=lambda v: degrees[v], reverse=reverse)
+
+def learn_embeddings(walks, emb_size = 10, window = 10):
+    '''
+    Learn embeddings by optimizing the Skipgram objective using SGD.
+    '''
+    walks = [list(map(str, walk)) for walk in walks]
+    model = Word2Vec(walks, size=emb_size, window=window, min_count=0, sg=1, workers=1, iter=1)
+
+    return model
+
+def word2vec_model(graph, num_walks = 10, walk_length = 10):
+    G = node2vec.Graph(graph, False, 1, 1)
+    G.preprocess_transition_probs()
+    walks = G.simulate_walks(num_walks, walk_length)
+    model = learn_embeddings(walks)
+    return model
+
+def get_word2vec_similarity(graph):
+    model = word2vec_model(graph)
+    node_sim = ddict(list)
+    f = str
+    if type(graph.nodes()[0]) == int:
+        f = int
+    for node in graph:
+        node_sim[node] = [f(w) for w, s in model.most_similar(str(node)) if f(w) in graph[node]]
+
+    return node_sim
+
+
+def node2vec_policy(node_sim, node):
+    return node_sim[node]
+
+def covering_walk(graph, source, node_sim):
     P = [0]  # supporting walk
     S = [0]  # stack of nodes to check
     node2anon = {source: 0}
@@ -126,11 +164,12 @@ def covering_walk(graph, source):
 
         # check if there is a node in the neighborhood that has not been explored yet
         Ncurr = list(nx.neighbors(graph, anon2node[curr]))
-        if random.uniform(0, 1) < 0.99:
+        if random.uniform(0, 1) < 0.0:
             random.shuffle(Ncurr)  # option 1: random order
         else:
-            Ncurr = sorted(Ncurr, key=lambda v: degrees[v], reverse=True)  # option 2: top-degree
-            # Ncurr = sorted(Ncurr, key=lambda v: degrees[v], reverse=False)  # option 3: low-degree
+            # Ncurr = degree_policy(Ncurr, degrees)  # option 2: top-degree
+            Ncurr = node2vec_policy(node_sim, anon2node[curr])
+
         # print(anon2node[curr], Ncurr)
         for neighbor in Ncurr:
             if neighbor in node2anon:
@@ -224,9 +263,10 @@ def canonical_labeling_covers(graph, degrees, samples_per_node = 10):
     canonical_nodes = filter(lambda v: v[1] == target_degree, degrees.items())
 
     covers = set()
+    node_sim = get_word2vec_similarity(graph)
     for node, freq in canonical_nodes:
         for _ in range(samples_per_node):
-            _, anon = covering_walk(graph, node)
+            _, anon = covering_walk(graph, node, node_sim)
             covers.add(tuple(anon))
     return covers
 
@@ -454,9 +494,6 @@ def print_cm2(cm):
     print('1\t', tp, fp)
     print('0\t', fn, tn)
 
-
-
-
 if __name__ == '__main__':
     random.seed(0)
     G1 = nx.Graph()
@@ -489,6 +526,10 @@ if __name__ == '__main__':
     aw.create_random_walk_graph()
     # Dl = aw.get_dl(0, 10)
 
+
+    model = word2vec_model(G1)
+    node_sim = get_word2vec_similarity(G1)
+
     # G = nx.read_edgelist('er_graphs_n10/0.edgelist')
     # print('G:', G.edges())
     # print(reconstruct_dfs2(G, '0'))
@@ -517,9 +558,9 @@ if __name__ == '__main__':
     G.add_edge('0','2')
     G.add_edge('0', '3')
 
-    print(cover2(G1, 0))
-    for _ in range(10):
-        print(cover2(G1, 0))
+    # print(cover2(G1, 0))
+    # for _ in range(10):
+    #     print(cover2(G1, 0))
 
 
     # print(graph_isomorphism_algorithm_covers(G3, G3))
@@ -548,10 +589,10 @@ if __name__ == '__main__':
     # print_cm(cm, set(truth))
 
     # experiment: generate regular graphs of different size and test when algo does not work
-    # for N in range(10, 101, 10):
-    #     G = nx.random_regular_graph(3, N)
-    #     G2 = relabel_graph(G)
-    #     print(N, graph_isomorphism_algorithm_covers(G, G2, 10))
+    for N in range(10, 101, 10):
+        G = nx.random_regular_graph(3, N)
+        G2 = relabel_graph(G)
+        print(N, graph_isomorphism_algorithm_covers(G, G2, 10))
 
     # graph_dir = '../../../reconstruction-data/regulars/'
     # fns = os.listdir(graph_dir)
