@@ -253,6 +253,7 @@ def cover2(graph, source):
         np.random.shuffle(Nlast) # here you can set any policy you want in which order to check neighbors
 
         # going in depth
+        foundneighbor = False
         for neighbor in Nlast:
             if neighbor not in visited: # found new node, then add it to the walk
                 random_walk.append(neighbor)
@@ -261,19 +262,21 @@ def cover2(graph, source):
                 visited.add(neighbor)
                 ranks[maxrank] = neighbor
                 revranks[neighbor] = maxrank
+                foundneighbor = True
                 break
-        else: # we didn't find any new neighbor and rollback
+
+        if not foundneighbor:  # we didn't find any new neighbor and rollback
+            # interconnecting nodes that are already in walk
+            for r in range(maxrank-1, lastrank+1, -1):
+                node = ranks[r]
+                if node not in checked[last] and node in Nlast:
+                    checked[last].append(node)
+                    random_walk.extend([node, last])
+
             stack.pop()
             if len(stack) > 0:
                 random_walk.append(stack[-1])
                 checked[last].append(stack[-1])
-
-        # interconnecting nodes that are already in walk
-        for r in range(maxrank-1, lastrank+1, -1):
-            node = ranks[r]
-            if node not in checked[last] and node in Nlast:
-                checked[last].append(node)
-                random_walk.extend([node, last])
 
     covering_anonymous_walk = [revranks[u] for u in random_walk]
     return covering_anonymous_walk, random_walk
