@@ -69,13 +69,6 @@ class MCTS():
             #_, v = self.nnet.predict(utils_mcts.get_states_emb([list(path)], self.graph_emb))
             return r
 
-        """
-        if s not in self.Es:
-            self.Es[s] = self.game.getGameEnded(canonicalBoard, 1)
-        if self.Es[s]!=0:
-            # terminal node
-            return -self.Es[s]
-        """
         if path not in self.Ps:
             # leaf node
             self.Ps[path], v = self.nnet.predict(utils_mcts.get_states_emb([list(path)], self.graph_emb))

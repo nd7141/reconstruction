@@ -2,6 +2,8 @@ from collections import deque
 import numpy as np
 import random
 import torch
+import networkx as nx
+from problem_ac import convert_graph
 
 class PathsBuffer(object):
     def __init__(self, capacity=1000, threshold = 0.75):
@@ -130,8 +132,78 @@ def random_walk(problem, path_length, vertex):
     for _ in range(path_length-1):
         next_vertex = random.sample(problem.edges[path[-1]],1)[0]
         path = problem.get_next_state(path, next_vertex)
-    return path    
-            
+    return path
 
+def cover2(graph, source):
+    random_walk = [source]
+    checked = ddict(list)
+    stack = [source]
+    visited = {source}
+    ranks = {0: source} # to attempt to get maximal cover (possible to do without rank, but then no guarantees on maximality)
+    revranks = {source: 0}
 
+    while len(stack) > 0:
+        last = stack[-1]
+        lastrank = revranks[last]
+        maxrank = max(ranks.keys()) + 1
+        Nlast = list(nx.neighbors(graph, last))
+        np.random.shuffle(Nlast) # here you can set any policy you want in which order to check neighbors
 
+        # going in depth
+        for neighbor in Nlast:
+            if neighbor not in visited: # found new node, then add it to the walk
+                random_walk.append(neighbor)
+                stack.append(neighbor)
+                checked[last].append(neighbor)
+                visited.add(neighbor)
+                ranks[maxrank] = neighbor
+                revranks[neighbor] = maxrank
+                break
+        else: # we didn't find any new neighbor and rollback
+            stack.pop()
+            if len(stack) > 0:
+                random_walk.append(stack[-1])
+                checked[last].append(stack[-1])
+
+        # interconnecting nodes that are already in walk
+        for r in range(maxrank-1, lastrank+1, -1):
+            node = ranks[r]
+            if node not in checked[last] and node in Nlast:
+                checked[last].append(node)
+                random_walk.extend([node, last])
+
+    covering_anonymous_walk = [revranks[u] for u in random_walk]
+    return covering_anonymous_walk, random_walk
+
+def graph_isomorphism_algorithm_covers(graph1, graph2, agent, policy, samples_per_node = 10):
+
+    degrees1 = dict(graph1.degree())
+    degrees2 = dict(graph2.degree())
+
+    if sorted(degrees1.values()) != sorted(degrees2.values()):
+        print('Stop on sequence degree')
+        return False
+
+    covers1 = canonical_labeling_covers(agent, graph1, policy, samples_per_node)
+    covers2 = canonical_labeling_covers(agent, graph2, policy, samples_per_node)
+
+    overlap = covers1.intersection(covers2)
+    if overlap:
+        return True
+    else:
+        return False
+
+def canonical_labeling_covers(agent, graph, policy, samples_per_node = 10):
+    covers = set()
+    graph = convert_graph(graph)
+    for node in graph.edges.keys():
+        for _ in range(samples_per_node):
+          random_walk = policy(agent, graph, node)
+          covers.add(tuple(convert_to_walk(random_walk)))
+    return covers
+
+def relabel_graph(G):
+    nodes = list(G.nodes())
+    new_order = random.sample(G.nodes(), G.order())
+    mapping = {nodes[i]: new_order[i] for i in range(len(new_order))}
+    return nx.relabel_nodes(G, mapping)

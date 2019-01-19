@@ -3,6 +3,7 @@ import numpy as np
 import torch, torch.nn as nn
 import torch.nn.functional as F
 import nn_utils_ac
+import utils_ac
 
 class ActorCriticPDist(nn.Module):
     def __init__(self, hid_size, gcn_size=None, lstm_size=None, walk_emb_size=None, vertex_emb_size=None,
@@ -49,14 +50,14 @@ class ActorCriticPDist(nn.Module):
         return dict(zip(map(int, vertices), vertex_emb))
 
 
-class ActorCriticFAct(nn.Module):
+class ActorCriticAct(nn.Module):
     def __init__(self, hid_size, gcn_size=None, lstm_size=None, walk_emb_size=None, vertex_emb_size=None,
-                 activation=nn.ELU(), layernorm=False, num_vertices=None):
+                 activation=nn.ELU(), layernorm=False):
         super().__init__()
         gcn_size = gcn_size or hid_size
         self.vertex_emb_size = vertex_emb_size = vertex_emb_size or hid_size
 
-        self.gcn = nn_utils.GraphConvolutionBlock(
+        self.gcn = nn_utils_ac.GraphConvolutionBlock(
             vertex_emb_size, gcn_size, out_size=hid_size, num_convolutions=2,
             activation=activation, normalize_hid=layernorm
         )
@@ -68,16 +69,11 @@ class ActorCriticFAct(nn.Module):
         )
 
         self.actor = nn.Sequential(
-            nn.Linear(2*hid_size, hid_size),
+            nn.Linear(3*hid_size, hid_size),
             activation,
-            nn.Linear(hid_size, num_vertices),
-            nn.Sigmoid(dim=1)
+            nn.Linear(hid_size, 1),
+            nn.Softmax(dim=0)
         )
-        
-    def forward(self, x):
-        value = self.critic(x)
-        prob = self.actor(x)
-        return prob, value
 
     def embed_graph(self, graph_edges, *, device=None, **kwargs):
         """
@@ -87,8 +83,23 @@ class ActorCriticFAct(nn.Module):
         assert len(graph_edges) == max(graph_edges) + 1, "graph vertices must be labeled 0...N without gaps"
         vertices = sorted(graph_edges.keys())
         vertices = torch.tensor(vertices, device=device, dtype=torch.int64)
-        vertex_emb = nn_utils.encode_indices(vertices, self.vertex_emb_size)
+        vertex_emb = nn_utils_ac.encode_indices(vertices, self.vertex_emb_size)
         # ^-- [num_vertices, vertex_emb_size]
-        adj = nn_utils.make_adjacency_matrix(graph_edges, device=device)  # sparse [num_vertices x num_vertices]
+        adj = nn_utils_ac.make_adjacency_matrix(graph_edges, device=device)  # sparse [num_vertices x num_vertices]
         vertex_emb = self.gcn(vertex_emb, adj)  # [num_vertices x hid_size]
         return dict(zip(map(int, vertices), vertex_emb))
+        
+    def get_dist(self, paths, graph_emb, edges):
+        paths_embs = utils_ac.get_states_emb(paths, graph_emb)
+        values = self.critic(paths_embs)
+        states = []
+        for i, path in enumerate(paths):
+            next_embs = []
+            for next_vertex in edges[path[-1]]:
+                next_vertex_emb = graph_emb[next_vertex]
+                next_embs.append(torch.cat([paths_embs[i], next_vertex_emb]))
+            states.append(torch.stack(next_embs))
+        predicts = []
+        for i in states:
+            predicts.append(self.actor(i).view(-1))
+        return predicts, values

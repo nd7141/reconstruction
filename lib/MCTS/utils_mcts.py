@@ -19,10 +19,14 @@ class PathsBuffer(object):
 
     def rank_path(self, path):
         #rank buffer by alphabetical walk order and select with reward 1
-        self.buffer.sort(key = lambda x: ''.join(str(i) for i in convert_to_walk(x)))
-        if path in self.buffer[round(self.threshold*len(self.buffer)):]:
+        buffer_copy = self.buffer[:]
+        buffer_copy.append(path)
+        if len(buffer_copy) > self.capacity:
+            buffer_copy.pop(0)
+        buffer_copy.sort(key = lambda x: convert_to_walk(x))
+        if path in buffer_copy[round(self.threshold*len(buffer_copy)):]:
             return 1
-        return 0
+        return -1
     
     def __len__(self):
         return len(self.buffer)

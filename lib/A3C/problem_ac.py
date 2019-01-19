@@ -35,6 +35,13 @@ class GraphProblem:
             v[i] = 1
         return v
 
+    def get_edges(self):
+        d = dict()
+        for key in self.edges.keys():
+            d[key] = list(self.edges[key])
+        return d
+
+
     def get_next_state(self, path, vertex):
         return path + [vertex]
 
@@ -89,3 +96,15 @@ def generate_regular_problems(num_vertices=10, degree=3):
 
         problem.reset()
         yield problem
+
+def convert_graph(graph):
+    graph = connect_graph(graph)
+    graph_edges = defaultdict(set)
+    num_edges = 0
+    nx_graph = graph
+    for v1, v2 in graph.edges:
+        graph_edges[v1].add(v2)
+        graph_edges[v2].add(v1)
+        num_edges += 1
+    problem = GraphProblem(graph_edges, 0, num_edges, nx_graph)
+    return problem
