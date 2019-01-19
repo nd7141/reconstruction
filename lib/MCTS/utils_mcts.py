@@ -25,8 +25,8 @@ class PathsBuffer(object):
             buffer_copy.pop(0)
         buffer_copy.sort(key = lambda x: convert_to_walk(x))
         if path in buffer_copy[round(self.threshold*len(buffer_copy)):]:
-            return 1
-        return -1
+            return 1.0
+        return -1.0
     
     def __len__(self):
         return len(self.buffer)

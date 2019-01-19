@@ -35,6 +35,12 @@ class GraphProblem:
             v[i] = 1
         return v
 
+    def get_edges(self):
+        d = dict()
+        for key in self.edges.keys():
+            d[key] = list(self.edges[key])
+        return d
+
     def get_next_state(self, path, vertex):
         return path + [vertex]
 
