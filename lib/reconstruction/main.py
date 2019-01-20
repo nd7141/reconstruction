@@ -124,6 +124,25 @@ def reconstruct_dfs2(graph, source, verbose=False):
 def degree_policy(neighbors, degrees, reverse=True):
     return sorted(neighbors, key=lambda v: degrees[v], reverse=reverse)
 
+def degree_random_policy(neighbors, degrees, reverse=True):
+    d_x_v =sorted([(degrees[v], v) for v in neighbors], reverse=False)
+    i = 0
+    sorted_degree_random = []
+    while i < len(d_x_v):
+        part = []
+        for j in range(i, len(d_x_v)):
+            if d_x_v[i][0] == d_x_v[j][0]:
+                part.append(d_x_v[j][1])
+            else:
+                break
+        random.shuffle(part)
+        sorted_degree_random.extend(part)
+        if i == len(d_x_v) - 1:
+            break
+        else:
+            i = j
+    return sorted_degree_random
+
 def learn_embeddings(walks, emb_size = 10, window = 2):
     '''
     Learn embeddings by optimizing the Skipgram objective using SGD.
@@ -199,7 +218,7 @@ def covering_walk(graph, source, node_sim=None):
     random_walk = [anon2node[v] for v in P]
     return random_walk, P
 
-def canonical_labeling_covers(graph, degrees, samples_per_node = 10):
+def canonical_labeling_covers(graph, degrees, samples_per_node = 10, random_threshold=1):
     if degrees is None:
         degrees = graph.degree()
 
@@ -210,15 +229,15 @@ def canonical_labeling_covers(graph, degrees, samples_per_node = 10):
     canonical_nodes = filter(lambda v: v[1] == target_degree, degrees.items())
 
     covers = set()
-    node_sim = get_word2vec_similarity(graph)
+    # node_sim = get_word2vec_similarity(graph)
     for node, freq in canonical_nodes:
         for _ in range(samples_per_node):
-            _, anon = covering_walk(graph, node, node_sim)
-            covers.add(tuple(anon))
+            rw, aw = cover2(graph, node, random_threshold=random_threshold)
+            covers.add(hash(tuple(aw)))
     return covers
 
 
-def graph_isomorphism_algorithm_covers(graph1, graph2, samples_per_node = 10):
+def graph_isomorphism_algorithm_covers(graph1, graph2, samples_per_node = 10, random_threshold=1):
 
     degrees1 = dict(graph1.degree())
     degrees2 = dict(graph2.degree())
@@ -227,8 +246,8 @@ def graph_isomorphism_algorithm_covers(graph1, graph2, samples_per_node = 10):
         print('Stop on sequence degree')
         return False
 
-    covers1 = canonical_labeling_covers(graph1, degrees1, samples_per_node)
-    covers2 = canonical_labeling_covers(graph2, degrees2, samples_per_node)
+    covers1 = canonical_labeling_covers(graph1, degrees1, samples_per_node, random_threshold)
+    covers2 = canonical_labeling_covers(graph2, degrees2, samples_per_node, random_threshold)
 
     overlap = covers1.intersection(covers2)
     if overlap:
@@ -255,7 +274,8 @@ def cover2(graph, source, random_threshold=0):
         if random.uniform(0, 1) < random_threshold:
             random.shuffle(Nlast)  # option 1: random order
         else:
-            Nlast = degree_policy(Nlast, degrees)  # option 2: top-degree
+            # Nlast = degree_policy(Nlast, degrees)  # option 2: top-degree
+            Nlast = degree_random_policy(Nlast, degrees)  # option 2: top-degree
             # Ncurr = node2vec_policy(node_sim, anon2node[curr])
 
 
@@ -640,9 +660,7 @@ if __name__ == '__main__':
     # for _ in range(10):
     #     print(cover2(G1, 0))
 
-    G = nx.read_edgelist('regular/reg_graphs_n10_d5/0.edgelist')
-    rw, aw = cover2(G, '0')
-    print(check_that_cover(rw, G))
+    # print(degree_random_policy([3, 2, 1, 0], {3: 2, 2: 2, 1: 3, 0: 1}))
 
     # longest path experiment final
     # fns = os.listdir('longest')
@@ -665,6 +683,29 @@ if __name__ == '__main__':
     # print(sorted(list(zip(opts, preds, stds, np.array(preds)/np.array(opts)))))
 
     console = []
+
+    # graph isomorphism experiment final
+    results = ddict(int)
+    samples_per_node = 100
+    random_threshold = 0
+    # basepath = 'erdosrenyi/er'
+    basepath = 'regular/reg'
+    print('Random Threshold:', random_threshold)
+    print('Basepath:', basepath)
+    for n in range(10, 11, 10):
+        fns = os.listdir(basepath + '_graphs_n{}_d5/'.format(n))
+        start = time.time()
+        for fn in fns:
+            G1 = nx.read_edgelist(basepath + '_graphs_n{}_d5/'.format(n) + fn)
+            G2 = relabel_graph(G1)
+            res = graph_isomorphism_algorithm_covers(G1, G2,
+                                                     samples_per_node=samples_per_node,
+                                                     random_threshold=random_threshold)
+            results[n] += res*1
+        end = time.time()
+        print('end-start', end-start, results[n])
+
+    print(dict(results))
 
     # print(graph_isomorphism_algorithm_covers(G3, G3))
     # print(graph_isomorphism_algorithm_covers(G4, G4))
