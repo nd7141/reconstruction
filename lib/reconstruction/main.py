@@ -556,6 +556,22 @@ def longest_path_from_cover(cover):
         if cover[i] != cover[i - 1] + 1:
             return i - 1
 
+def check_that_cover(random_walk, graph):
+    checked = {tuple(sorted(e)): 0 for e in graph.edges()}
+    for i in range(len(random_walk) - 1):
+        r_edge = tuple(sorted([random_walk[i], random_walk[i+1]]))
+        if r_edge not in checked:
+            print('Found edge that does not exist', r_edge)
+            return False
+        else:
+            checked[r_edge] = 1
+
+    if sum(checked.values()) == graph.size():
+        return True
+    else:
+        print('Not all edges are found', checked)
+        return False
+
 if __name__ == '__main__':
     random.seed(0)
     G1 = nx.Graph()
@@ -624,24 +640,29 @@ if __name__ == '__main__':
     # for _ in range(10):
     #     print(cover2(G1, 0))
 
-    fns = os.listdir('longest')
-    for fn in fns:
-        graphs = [nx.read_edgelist('longest/' + fn) for fn in fns]
-        opts = [int(re.findall('\d+', fn)[0]) for fn in fns]
+    G = nx.read_edgelist('regular/reg_graphs_n10_d5/0.edgelist')
+    rw, aw = cover2(G, '0')
+    print(check_that_cover(rw, G))
 
-    preds = []
-    stds = []
-    for i in range(len(graphs)):
-        print(i, graphs[i].size())
-        samples = []
-        for sample in range(1000):
-            rw, aw = cover2(graphs[i], '0', random_threshold=0)
-            samples.append(longest_path_from_cover(aw))
-        preds.append(np.mean(samples))
-        stds.append(np.std(samples))
-
-
-    print(sorted(list(zip(opts, preds, stds, np.array(preds)/np.array(opts)))))
+    # longest path experiment final
+    # fns = os.listdir('longest')
+    # for fn in fns:
+    #     graphs = [nx.read_edgelist('longest/' + fn) for fn in fns]
+    #     opts = [int(re.findall('\d+', fn)[0]) for fn in fns]
+    #
+    # preds = []
+    # stds = []
+    # for i in range(len(graphs)):
+    #     print(i, graphs[i].size())
+    #     samples = []
+    #     for sample in range(1000):
+    #         rw, aw = cover2(graphs[i], '0', random_threshold=0)
+    #         samples.append(longest_path_from_cover(aw))
+    #     preds.append(np.mean(samples))
+    #     stds.append(np.std(samples))
+    #
+    #
+    # print(sorted(list(zip(opts, preds, stds, np.array(preds)/np.array(opts)))))
 
     console = []
 
