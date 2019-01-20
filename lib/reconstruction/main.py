@@ -9,10 +9,10 @@ import networkx as nx
 import numpy as np
 import sklearn
 
-import node2vec
+# import node2vec
 from sklearn.linear_model import LogisticRegression as LR
 
-from gensim.models import Word2Vec
+# from gensim.models import Word2Vec
 
 import re
 
@@ -196,8 +196,8 @@ def covering_walk(graph, source, node_sim=None):
                     P = replace(P, curr, u)
                 checked.setdefault(curr, set()).add(u)
 
-    cover = [anon2node[v] for v in P]
-    return cover, P
+    random_walk = [anon2node[v] for v in P]
+    return random_walk, P
 
 def canonical_labeling_covers(graph, degrees, samples_per_node = 10):
     if degrees is None:
@@ -237,20 +237,27 @@ def graph_isomorphism_algorithm_covers(graph1, graph2, samples_per_node = 10):
         return False
 
 
-def cover2(graph, source):
+def cover2(graph, source, random_threshold=0):
     random_walk = [source]
     checked = ddict(list)
     stack = [source]
     visited = {source}
     ranks = {0: source} # to attempt to get maximal cover (possible to do without rank, but then no guarantees on maximality)
     revranks = {source: 0}
+    degrees = graph.degree()
 
     while len(stack) > 0:
         last = stack[-1]
         lastrank = revranks[last]
         maxrank = max(ranks.keys()) + 1
         Nlast = list(nx.neighbors(graph, last))
-        np.random.shuffle(Nlast) # here you can set any policy you want in which order to check neighbors
+        # np.random.shuffle(Nlast) # here you can set any policy you want in which order to check neighbors
+        if random.uniform(0, 1) < random_threshold:
+            random.shuffle(Nlast)  # option 1: random order
+        else:
+            Nlast = degree_policy(Nlast, degrees)  # option 2: top-degree
+            # Ncurr = node2vec_policy(node_sim, anon2node[curr])
+
 
         # going in depth
         foundneighbor = False
@@ -279,7 +286,7 @@ def cover2(graph, source):
                 checked[last].append(stack[-1])
 
     covering_anonymous_walk = [revranks[u] for u in random_walk]
-    return covering_anonymous_walk, random_walk
+    return random_walk, covering_anonymous_walk
 
 
 def connect_graph(graph):
@@ -544,6 +551,11 @@ def logreg(graph, embeddings, topk):
 
     return model
 
+def longest_path_from_cover(cover):
+    for i in range(1, len(cover)):
+        if cover[i] != cover[i - 1] + 1:
+            return i - 1
+
 if __name__ == '__main__':
     random.seed(0)
     G1 = nx.Graph()
@@ -577,8 +589,8 @@ if __name__ == '__main__':
     # Dl = aw.get_dl(0, 10)
 
 
-    model = word2vec_model(G1)
-    node_sim = get_word2vec_similarity(G1)
+    # model = word2vec_model(G1)
+    # node_sim = get_word2vec_similarity(G1)
 
     # G = nx.read_edgelist('er_graphs_n10/0.edgelist')
     # print('G:', G.edges())
@@ -600,7 +612,7 @@ if __name__ == '__main__':
     # G3 = nx.convert_node_labels_to_integers(G3)
     # G4 = nx.convert_node_labels_to_integers(G4)
 
-    G = nx.read_edgelist('../../reg_graphs_n8_d3/1.edgelist')
+    # G = nx.read_edgelist('../../reg_graphs_n8_d3/1.edgelist')
     # print(covering_walk(G, '0'))
 
     G = nx.Graph()
@@ -612,6 +624,26 @@ if __name__ == '__main__':
     # for _ in range(10):
     #     print(cover2(G1, 0))
 
+    fns = os.listdir('longest')
+    for fn in fns:
+        graphs = [nx.read_edgelist('longest/' + fn) for fn in fns]
+        opts = [int(re.findall('\d+', fn)[0]) for fn in fns]
+
+    preds = []
+    stds = []
+    for i in range(len(graphs)):
+        print(i, graphs[i].size())
+        samples = []
+        for sample in range(1000):
+            rw, aw = cover2(graphs[i], '0', random_threshold=0)
+            samples.append(longest_path_from_cover(aw))
+        preds.append(np.mean(samples))
+        stds.append(np.std(samples))
+
+
+    print(sorted(list(zip(opts, preds, stds, np.array(preds)/np.array(opts)))))
+
+    console = []
 
     # print(graph_isomorphism_algorithm_covers(G3, G3))
     # print(graph_isomorphism_algorithm_covers(G4, G4))
@@ -644,22 +676,22 @@ if __name__ == '__main__':
     #     G2 = relabel_graph(G)
     #     print(N, graph_isomorphism_algorithm_covers(G, G2, 1))
 
-    G = nx.random_regular_graph(3, 10)
-    start = time.time()
-    for _ in range(100):
-        covering_walk(G, 0)
-    end = time.time()
-    print('time', end-start)
-    model = word2vec_model(G)
-    N = len(G)
-    def get_ranked_neigbors(graph, node):
-        return [v for v in model.most_similar(str(node), topn=len(graph)) if int(v[0]) in G[node]]
-    covers = generate_cover_corpus(G, 1)
-    topk = get_top_covers(covers)
-    embeddings = {node: model.wv[str(node)] for node in G}
-    model = logreg(G, embeddings, topk)
-
-    print(get_ranked_neigbors(G, 0))
+    # G = nx.random_regular_graph(3, 10)
+    # start = time.time()
+    # for _ in range(100):
+    #     covering_walk(G, 0)
+    # end = time.time()
+    # print('time', end-start)
+    # model = word2vec_model(G)
+    # N = len(G)
+    # def get_ranked_neigbors(graph, node):
+    #     return [v for v in model.most_similar(str(node), topn=len(graph)) if int(v[0]) in G[node]]
+    # covers = generate_cover_corpus(G, 1)
+    # topk = get_top_covers(covers)
+    # embeddings = {node: model.wv[str(node)] for node in G}
+    # model = logreg(G, embeddings, topk)
+    #
+    # print(get_ranked_neigbors(G, 0))
 
     # graph_dir = '../../../reconstruction-data/regulars/'
     # fns = os.listdir(graph_dir)
