@@ -29,7 +29,7 @@ def connect_graph(graph):
 def generate_ER_graphs(n_graphs,
                        n_vertices,
                        prob,
-                       save_to_files=None, graph_dir=None):
+                       graph_dir=None):
     '''Generate Erdos-Renyi graphs of the same order.
     Optionally saves graphs to the folder.
     It will make sure to connect components by indtroducing new edges.
@@ -47,7 +47,8 @@ def generate_ER_graphs(n_graphs,
     '''
     graphs = [connect_graph(nx.erdos_renyi_graph(n_vertices, prob))
               for _ in range(n_graphs)]
-    if save_to_files:
+    if graph_dir:
+        print(graph_dir)
         if not os.path.exists(graph_dir):
             os.mkdir(graph_dir)
         [nx.write_edgelist(G, '{}/{}.edgelist'.format(graph_dir, ix)) for ix, G in enumerate(graphs)]
@@ -117,7 +118,7 @@ def generate_regular_graphs(n_graphs, n_vertices, degree, graph_dir=None):
     :param graph_dir: graph directory
     :return:
     '''
-    graphs = [nx.random_regular_graph(degree, n_vertices)
+    graphs = [connect_graph(nx.random_regular_graph(degree, n_vertices))
               for _ in range(n_graphs)]
     if graph_dir:
         print(graph_dir)
@@ -171,6 +172,28 @@ def generate_regular_dataset(graph_dir, nv_range, ng_range, degree):
                 g_copy = relabel_graph(graphs[t])
                 nx.write_edgelist(g_copy, './regulars/regular_n{}_d{}_t{}_c{}.edgelist'.format(NV, D, t, c))
 
+def generate_longest_path_graphs(num_branches, length):
+    currmax = 0
+    max_length = -1
+    Gglobal = nx.Graph()
+    for b in range(num_branches):
+        l = np.random.randint(length - length//3, length + length//3 + 1)
+        if l > max_length:
+            max_length = l
+        G = nx.path_graph(l)
+        mu = np.random.randint(0, l // 3 + 1)
+        for _ in range(mu):
+            pair = np.random.choice(range(l), 2, replace=False)
+            G.add_edge(pair[0], pair[1])
+
+        mapping = dict(zip(range(1, l), range(currmax + 1, currmax + l)))
+        Gnew = nx.relabel_nodes(G, mapping)
+        Gglobal = nx.compose(Gglobal, Gnew)
+        currmax = max(Gglobal.nodes())
+
+    return Gglobal, max_length
+
+
 
 if __name__ == '__main__':
 
@@ -200,9 +223,29 @@ if __name__ == '__main__':
     # orders = [5, 15, 20, 20, 20, 20, 20, 20, 20, 40]
     # generate_regular_dataset('regulars/', sizes, orders, D)
 
+    # generate graphs for experiments
+    # if not os.path.exists('./erdosrenyi/'):
+    #     os.mkdir('./erdosrenyi/')
+    # D = 5
+    # for NV in range(10, 101, 10):
+    #     # generate_regular_graphs(100, NV, D, graph_dir='./regular/reg_graphs_n{}_d5/'.format(NV))
+    #     generate_ER_graphs(100, NV, prob=0.2, graph_dir='./erdosrenyi/er_graphs_n{}_d5/'.format(NV))
 
-    # generate_regular_graphs(10, NV, D, graph_dir='./reg_graphs_n80_d3/')
+    # fns = os.listdir('../../../reconstruction-data/mz')
+    # if not os.path.exists('./mz/'):
+    #     os.mkdir('./mz/')
+    # for fn in fns:
+    #     G = read_dimacs_graph('../../../reconstruction-data/mz/' + fn)
+    #     nx.write_edgelist(G, './mz/{}.edgelist'.format(fn))
 
+    if not os.path.exists('longest/'):
+        os.mkdir('longest')
+    num_branches = 10
+    for length in range(10, 101, 10):
+        G, opt = generate_longest_path_graphs(num_branches, length)
+        nx.write_edgelist(G, 'longest/longest_opt{}.edgelist'.format(opt))
+
+    console = []
     # data_dir = '../../cmz/'
     # save_dir = '../../cmz-edges/'
     #
