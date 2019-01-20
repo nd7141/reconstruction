@@ -90,7 +90,13 @@ class ActorCriticAct(nn.Module):
         return dict(zip(map(int, vertices), vertex_emb))
         
     def get_dist(self, paths, graph_emb, edges):
-        paths_embs = utils_ac.get_states_emb(paths, graph_emb)
+        paths_embs = []
+        for path in paths:
+            path_emb = []
+            for item in path:
+                path_emb.append(graph_emb[item])
+            _, hidden = self.lstm(torch.stack(path_emb).unsqueeze(0))
+            paths_embs.append(hidden[0].view(-1))
         values = self.critic(paths_embs)
         states = []
         for i, path in enumerate(paths):

@@ -3,6 +3,7 @@ import numpy as np
 import torch, torch.nn as nn
 import torch.nn.functional as F
 import nn_utils
+import utils_mcts
 
 class Agent(nn.Module):
     def __init__(self, hid_size, gcn_size=None, vertex_emb_size=None,
@@ -100,7 +101,7 @@ class AgentAct(nn.Module):
         return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
 
     def get_dist(self, paths, graph_emb, edges):
-        paths_embs = utils_ac.get_states_emb(paths, graph_emb)
+        paths_embs = utils_mcts.get_states_emb(paths, graph_emb)
         values = self.critic(paths_embs)
         states = []
         for i, path in enumerate(paths):

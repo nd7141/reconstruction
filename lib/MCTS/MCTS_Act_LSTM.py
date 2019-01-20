@@ -65,8 +65,11 @@ class MCTS():
             v: the negative of the value of the current canonicalBoard
         """
         if len(path) == self.path_length:
-            r = buffer.rank_path(list(path))
-            #_, v = self.nnet.predict(utils_mcts.get_states_emb([list(path)], self.graph_emb))
+            if len(buffer) < 10:
+                _, v = self.nnet.get_dist([path], self.graph_emb, self.edges)
+                r = v[0].item()
+            else:
+                r = buffer.rank_path(list(path))
             return r
 
         """

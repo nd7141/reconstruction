@@ -24,12 +24,28 @@ class PathsBuffer(object):
         if len(buffer_copy) > self.capacity:
             buffer_copy.pop(0)
         buffer_copy.sort(key = lambda x: convert_to_walk(x))
-        if path in buffer_copy[round(self.threshold*len(buffer_copy)):]:
+        path_num = round(self.threshold*len(buffer_copy))
+        if convert_to_walk(path) > convert_to_walk(buffer_copy[path_num]):
             return 1.0
+        elif convert_to_walk(path) == convert_to_walk(buffer_copy[path_num]):
+            return float(random.sample([1, -1], 1)[0])
         return -1.0
+    
+    def is_paths_buffer_valid(self):
+        self.buffer.sort(key = lambda x: convert_to_walk(x))
+        for i in range(len(self.buffer)-1):
+            if convert_to_walk(self.buffer[i]) >= convert_to_walk(self.buffer[i+1]):
+                return False
+        return True
     
     def __len__(self):
         return len(self.buffer)
+
+def is_valid_path_new(path, edges):
+    for i in range(len(path)-1):
+        if path[i+1] not in edges[path[i]]:
+            return False
+    return True
 
 def convert_to_walk(path):
     mapping = dict()
@@ -66,3 +82,4 @@ class ReplayBuffer(object):
     
     def __len__(self):
         return len(self.buffer)
+    

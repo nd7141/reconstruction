@@ -41,7 +41,6 @@ class GraphProblem:
             d[key] = list(self.edges[key])
         return d
 
-
     def get_next_state(self, path, vertex):
         return path + [vertex]
 
