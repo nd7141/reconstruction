@@ -3,7 +3,9 @@ import numpy as np
 import random
 import torch
 import networkx as nx
-from problem_mcts import convert_graph
+from problem_mcts import GraphProblem, convert_graph
+import glob
+from collections import defaultdict
 
 class PathsBuffer(object):
     def __init__(self, capacity=1000, threshold = 0.75):
@@ -144,19 +146,19 @@ def check_that_cover(random_walk, problem):
         print('Not all edges are found', checked)
         return False
 
- def generate_graphs(path, n_graphs):
+def generate_graphs(path, n_graphs):
     graphs = []
-    samples = random.sample(glob.glob(path+"/*"), n_graphs)
+    samples = random.choices(glob.glob(path+"/*"), k=n_graphs)
     for sample in samples:
-        graph_path = random.sample(glob.glob(sample+"/9?.edgelist"),1)
+        graph_path = random.choices(glob.glob(sample+"/9?.edgelist"),k=1)
         with open(graph_path[0], "rb") as f:
             graph = nx.read_edgelist(f)
             graph_edges = defaultdict(set)
             num_edges = 0
             nx_graph = graph
             for v1, v2 in graph.edges:
-                graph_edges[v1].add(v2)
-                graph_edges[v2].add(v1)
+                graph_edges[int(v1)].add(int(v2))
+                graph_edges[int(v2)].add(int(v1))
                 num_edges += 1
         graphs.append(GraphProblem(graph_edges, 0, num_edges, nx_graph))
     return graphs   
