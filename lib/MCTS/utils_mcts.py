@@ -92,7 +92,7 @@ class ReplayBuffer(object):
         return random.sample(self.buffer, batch_size)
     
     def flush(self):
-        self.buffer = deque(maxlen=capacity)
+        self.buffer = deque(maxlen=self.capacity)
     
     def __len__(self):
         return len(self.buffer)

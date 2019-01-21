@@ -11,6 +11,7 @@ class Agent(nn.Module):
         super().__init__()
         gcn_size = gcn_size or hid_size
         self.vertex_emb_size = vertex_emb_size = vertex_emb_size or hid_size
+        self.k = []
 
         self.gcn = nn_utils.GraphConvolutionBlock(
             vertex_emb_size, gcn_size, out_size=hid_size, num_convolutions=2,

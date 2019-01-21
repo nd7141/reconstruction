@@ -65,12 +65,12 @@ class MCTS():
             v: the negative of the value of the current canonicalBoard
         """
         if len(path) == self.path_length:
-            _, v = self.nnet.get_dist([list(path)], self.graph_emb, self.edges)
+            _, v = self.nnet.get_dist([list(path)[:]], self.graph_emb, self.edges)
             return v[0].item()
 
         if path not in self.Ps:
             # leaf node
-            probs, v = self.nnet.get_dist([path], self.graph_emb, self.edges)
+            probs, v = self.nnet.get_dist([list(path)[:]], self.graph_emb, self.edges)
             self.Ps[path] = probs[0].data.numpy()
             self.Vs[path] = self.edges[path[-1]]
             self.Ns[path] = 0
@@ -87,11 +87,9 @@ class MCTS():
                 u = self.Qsa[(path,a)] + self.cpuct*self.Ps[path][k]*math.sqrt(self.Ns[path])/(1+self.Nsa[(path,a)])
             else:
                 u = self.cpuct*self.Ps[path][k]*math.sqrt(self.Ns[path] + EPS)     # Q = 0 ?
-
             if u > cur_best:
                 cur_best = u
                 best_act = a
-
         vertex = best_act
         next_path = self.game.get_next_state(list(path), vertex)
 
