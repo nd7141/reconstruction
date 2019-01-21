@@ -95,7 +95,6 @@ class ActorCriticAct(nn.Module):
             path_emb = []
             for item in path:
                 path_emb.append(graph_emb[item])
-            _, hidden = self.lstm(torch.stack(path_emb).unsqueeze(0))
             paths_embs.append(hidden[0].view(-1))
         values = self.critic(paths_embs)
         states = []

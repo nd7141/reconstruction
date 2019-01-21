@@ -7,7 +7,7 @@ class MCTS():
     This class handles the MCTS tree.
     """
 
-    def __init__(self, game, nnet, graph_emb, numMCTSSims, cpuct, edges, path_length=100):
+    def __init__(self, game, nnet, graph_emb, numMCTSSims, cpuct, edges, path_length=None):
         self.game = game
         self.graph_emb = graph_emb
         self.path_length = path_length
@@ -65,20 +65,9 @@ class MCTS():
             v: the negative of the value of the current canonicalBoard
         """
         if len(path) == self.path_length:
-            if len(buffer) < 10:
-                _, v = self.nnet.get_dist([path], self.graph_emb, self.edges)
-                r = v[0].item()
-            else:
-                r = buffer.rank_path(list(path))
-            return r
+            _, v = self.nnet.get_dist([list(path)], self.graph_emb, self.edges)
+            return v[0].item()
 
-        """
-        if s not in self.Es:
-            self.Es[s] = self.game.getGameEnded(canonicalBoard, 1)
-        if self.Es[s]!=0:
-            # terminal node
-            return -self.Es[s]
-        """
         if path not in self.Ps:
             # leaf node
             probs, v = self.nnet.get_dist([path], self.graph_emb, self.edges)

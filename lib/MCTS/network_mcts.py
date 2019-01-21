@@ -71,7 +71,8 @@ class AgentAct(nn.Module):
         self.critic = nn.Sequential(
             nn.Linear(2*hid_size, hid_size),
             activation,
-            nn.Linear(hid_size, 1)
+            nn.Linear(hid_size, 1),
+            nn.Tanh()
         )
 
         self.actor = nn.Sequential(
@@ -133,7 +134,8 @@ class AgentActLSTM(nn.Module):
         self.critic = nn.Sequential(
             nn.Linear(hid_size, hid_size),
             activation,
-            nn.Linear(hid_size, 1)
+            nn.Linear(hid_size, 1),
+            nn.Tanh()
         )
 
         self.actor = nn.Sequential(
@@ -157,11 +159,6 @@ class AgentActLSTM(nn.Module):
         vertex_emb = self.gcn(vertex_emb, adj)  # [num_vertices x hid_size]
         return dict(zip(map(int, vertices), vertex_emb))
 
-    def predict(self, embs):
-        with torch.no_grad():
-            pi, v = self.forward(embs)
-        return torch.exp(pi).data.cpu().numpy()[0], v.data.cpu().numpy()[0]
-
     def get_dist(self, paths, graph_emb, edges):
         # get paths embedings
         paths_embs = []
@@ -170,7 +167,7 @@ class AgentActLSTM(nn.Module):
             for item in path:
                 path_emb.append(graph_emb[item])
             _, hidden = self.lstm(torch.stack(path_emb).unsqueeze(0))
-            paths_embs.append(hidden[0].view(-1))
+            paths_embs.append(hidden[-1].view(-1))
         states = []
         for i, path in enumerate(paths):
             next_embs = []

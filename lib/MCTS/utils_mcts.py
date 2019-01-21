@@ -2,6 +2,8 @@ from collections import deque
 import numpy as np
 import random
 import torch
+import networkx as nx
+from problem_mcts import convert_graph
 
 class PathsBuffer(object):
     def __init__(self, capacity=1000, threshold = 0.75):
@@ -18,7 +20,6 @@ class PathsBuffer(object):
         self.buffer = []
 
     def rank_path(self, path):
-        #rank buffer by alphabetical walk order and select with reward 1
         buffer_copy = self.buffer[:]
         buffer_copy.append(path)
         if len(buffer_copy) > self.capacity:
@@ -42,6 +43,13 @@ class PathsBuffer(object):
         return len(self.buffer)
 
 def is_valid_path_new(path, edges):
+    for i in range(len(path)-1):
+        if path[i+1] not in edges[path[i]]:
+            return False
+    return True
+
+def is_valid_path(path, problem):
+    edges = problem.edges
     for i in range(len(path)-1):
         if path[i+1] not in edges[path[i]]:
             return False
@@ -73,6 +81,7 @@ def get_states_emb(paths, graph_emb):
 class ReplayBuffer(object):
     def __init__(self, capacity=1000):
         self.buffer = deque(maxlen=capacity)
+        self.capacity = 1000
     
     def push(self, records):
         self.buffer.extend(records)
@@ -80,6 +89,74 @@ class ReplayBuffer(object):
     def sample(self, batch_size):
         return random.sample(self.buffer, batch_size)
     
+    def flush(self):
+        self.buffer = deque(maxlen=capacity)
+    
     def __len__(self):
         return len(self.buffer)
-    
+
+def graph_isomorphism_algorithm_covers(graph1, graph2, agent, policy, samples_per_node = 10):
+
+    degrees1 = dict(graph1.degree())
+    degrees2 = dict(graph2.degree())
+
+    if sorted(degrees1.values()) != sorted(degrees2.values()):
+        print('Stop on sequence degree')
+        return False
+
+    covers1 = canonical_labeling_covers(agent, graph1, policy, samples_per_node)
+    covers2 = canonical_labeling_covers(agent, graph2, policy, samples_per_node)
+
+    overlap = covers1.intersection(covers2)
+    if overlap:
+        return True
+    else:
+        return False
+
+def canonical_labeling_covers(agent, graph, policy, samples_per_node = 10):
+    covers = set()
+    graph = convert_graph(graph)
+    for node in graph.edges.keys():
+        for _ in range(samples_per_node):
+          random_walk = policy(agent, graph, node)
+          covers.add(tuple(convert_to_walk(random_walk)))
+    return covers
+
+def relabel_graph(G):
+    nodes = list(G.nodes())
+    new_order = random.sample(G.nodes(), G.order())
+    mapping = {nodes[i]: new_order[i] for i in range(len(new_order))}
+    return nx.relabel_nodes(G, mapping)
+
+def check_that_cover(random_walk, problem):
+    checked = {tuple(sorted(e)): 0 for e in problem.nx_graph.edges()}
+    for i in range(len(random_walk) - 1):
+        r_edge = tuple(sorted([random_walk[i], random_walk[i+1]]))
+        if r_edge not in checked:
+            print('Found edge that does not exist', r_edge)
+            return False
+        else:
+            checked[r_edge] = 1
+
+    if sum(checked.values()) == problem.nx_graph.size():
+        return True
+    else:
+        print('Not all edges are found', checked)
+        return False
+
+ def generate_graphs(path, n_graphs):
+    graphs = []
+    samples = random.sample(glob.glob(path+"/*"), n_graphs)
+    for sample in samples:
+        graph_path = random.sample(glob.glob(sample+"/9?.edgelist"),1)
+        with open(graph_path[0], "rb") as f:
+            graph = nx.read_edgelist(f)
+            graph_edges = defaultdict(set)
+            num_edges = 0
+            nx_graph = graph
+            for v1, v2 in graph.edges:
+                graph_edges[v1].add(v2)
+                graph_edges[v2].add(v1)
+                num_edges += 1
+        graphs.append(GraphProblem(graph_edges, 0, num_edges, nx_graph))
+    return graphs   
